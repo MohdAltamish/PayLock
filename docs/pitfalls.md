@@ -120,3 +120,10 @@ Platform payee confirmed: every smoke order's `purchase_units[0].payee.email_add
 
 - **Out of order:** for authorization `6L560595JM8649442`, `PAYMENT.AUTHORIZATION.VOIDED` arrived at 13:45:15 and `PAYMENT.AUTHORIZATION.CREATED` at 13:45:27. Webhook order cannot be trusted; this confirms ADR-009 (the reconciler reads current state with GET and only moves forward).
 - **Repeats with different ids:** `CHECKOUT.ORDER.APPROVED` for order `92J50534E99722541` arrived three times with three distinct event ids (likely one per approval-page submit). Dedup by event id alone does not make processing idempotent; handlers must be idempotent on the resource and the deal state too.
+
+### Resolution (13:53 UTC)
+
+- Owner turned payment review **off** on `admin@paylock.example.com`. The next capture (`3DD17955H0487825M`, card, 2.00) returned `COMPLETED` immediately.
+- The three captures taken while review was on stay `PENDING_REVIEW`; turning review off does not release them. Old pending captures are left as they are (sandbox only, small amounts).
+- `PAYPAL_PLATFORM_EMAIL` unchanged. Note: that variable is informational; PayPal credits the account the REST app belongs to, whatever the env says.
+- INSTRUCTIONS prerequisites already say payment review must be off. Settlement still treats PENDING as "Confirming with PayPal" and never pays out until COMPLETED.
