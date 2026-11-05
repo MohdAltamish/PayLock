@@ -227,6 +227,19 @@ export class PayPalAdapter {
     return parse(Capture, res.data, "capture authorization");
   }
 
+  /**
+   * Read a capture. Settlement confirms every capture's amount and status with
+   * this GET before recording it (C7: a reused key can echo a different amount),
+   * and the sweeper polls it while a capture is PENDING.
+   */
+  async getCapture(captureId: string) {
+    const res = await this.http.request({
+      method: "GET",
+      path: `/v2/payments/captures/${enc(captureId)}`,
+    });
+    return parse(Capture, res.data, "get capture");
+  }
+
   /** Allowed during PAYLOCK_FREEZE. Returns the authorization when PayPal sends a body (200), else undefined (204). */
   async voidAuthorization(
     authorizationId: string,

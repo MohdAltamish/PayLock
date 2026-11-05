@@ -243,6 +243,22 @@ describe("captureAuthorization", () => {
   });
 });
 
+describe("getCapture", () => {
+  it("GETs the capture and parses status and amount (C7 re-check)", async () => {
+    const { adapter, requests } = setup(() => ({
+      data: { id: "CAP1", status: "PENDING", amount: { currency_code: "USD", value: "3.00" } },
+    }));
+    const cap = await adapter.getCapture("CAP1");
+    expect(requests[0]).toMatchObject({ method: "GET", path: "/v2/payments/captures/CAP1" });
+    expect(requests[0]!.requestId).toBeUndefined();
+    expect(cap).toMatchObject({ status: "PENDING", amount: { value: "3.00" } });
+  });
+  it("is allowed during a freeze (read only)", async () => {
+    const { adapter } = setup(() => ({ data: { id: "CAP1", status: "COMPLETED" } }), true);
+    await expect(adapter.getCapture("CAP1")).resolves.toMatchObject({ status: "COMPLETED" });
+  });
+});
+
 describe("voidAuthorization", () => {
   it("is allowed during PAYLOCK_FREEZE and handles 204", async () => {
     const { adapter, requests } = setup(() => ({ status: 204, data: undefined }), true);
