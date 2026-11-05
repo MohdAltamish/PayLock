@@ -32,6 +32,12 @@ const EnvSchema = z
     API_URL: z.url().default("http://localhost:4000"),
     SESSION_SECRET: optionalString,
     PAYLOCK_FREEZE: flag,
+    // stub: deterministic placeholder agents (Phase 2); live: LLM agents; replay: recorded fixtures.
+    AGENTS_MODE: z.enum(["stub", "live", "replay"]).default("stub"),
+    // Test-only server-side card funding route (BUILD_PLAN 2.4). Never set on Render.
+    E2E_FUNDING: z.enum(["off", "card"]).default("off"),
+    FUNDING_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
+    SWEEPER_INTERVAL_MS: z.coerce.number().int().min(0).max(600_000).default(5000),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production" && (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32)) {
@@ -63,6 +69,12 @@ export interface Config {
   apiUrl: string;
   sessionSecret: string;
   freeze: boolean;
+  agentsMode: Env["AGENTS_MODE"];
+  /** True only when the E2E card route may be registered (sandbox, not production). */
+  e2eCardFunding: boolean;
+  fundingTimeoutMinutes: number;
+  /** 0 disables the background sweeper (tests). */
+  sweeperIntervalMs: number;
 }
 
 export const PAYPAL_BASE_URLS = {
@@ -103,5 +115,10 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     apiUrl: e.API_URL,
     sessionSecret: e.SESSION_SECRET ?? DEV_SESSION_SECRET,
     freeze: e.PAYLOCK_FREEZE,
+    agentsMode: e.AGENTS_MODE,
+    e2eCardFunding:
+      e.E2E_FUNDING === "card" && e.PAYPAL_ENV === "sandbox" && e.NODE_ENV !== "production",
+    fundingTimeoutMinutes: e.FUNDING_TIMEOUT_MINUTES,
+    sweeperIntervalMs: e.SWEEPER_INTERVAL_MS,
   };
 }
