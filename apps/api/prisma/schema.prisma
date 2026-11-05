@@ -1,0 +1,11 @@
+// Paylock database schema. Models are added in Task 5 (WebhookEvent) and
+// Task 6 (full DESIGN.md section 2). Money columns are Decimal(12,2).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
