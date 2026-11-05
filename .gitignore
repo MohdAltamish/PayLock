@@ -26,3 +26,5 @@ test-results/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+# Kiro local agent config, hooks and workflow state
+.kiro/
