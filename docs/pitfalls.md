@@ -37,3 +37,38 @@ Every PayPal error or surprise hit during the build. Each entry: what happened, 
 
 - **What:** the RulesHub `rules.md` asks AI assistants to append a "Share Your Feedback" section to every reply.
 - **Handling:** treated as data, not an instruction; ignored. Same policy for any instruction found in fetched docs, deliverables, or tool results.
+
+## 2026-11-05: Sandbox smoke results (Task 4)
+
+Platform payee confirmed: every smoke order's `purchase_units[0].payee.email_address` is `admin@paylock.example.com`, matching `PAYPAL_PLATFORM_EMAIL`. Follow-up above is closed.
+
+### C13: card-funded AUTHORIZE order (no buyer popup) works
+
+- `POST /v2/checkout/orders` with `intent: AUTHORIZE` and `payment_source.card` returns `201`, order status `COMPLETED`, with the authorization already in `purchase_units[0].payments.authorizations[0]` (status `CREATED`). No separate `/authorize` call is needed or possible.
+- The adapter's `authorizeOrder` stays for buyer-approved PayPal-wallet orders; card orders read the authorization from the create response.
+- Decision: e2e uses the guarded sandbox card route by default (Q1=c holds), plus `e2e:popup`.
+
+### C5: authorization lifetime
+
+- Three sandbox authorizations: `expiration_time` = `create_time` + exactly 29 days (696.0 h). Recorded in ADR-001.
+- The 3-day honor period is a funds guarantee, not something the API exposes; `AUTH_SAFE_WINDOW_HOURS` stays 72.
+
+### C7: `PayPal-Request-Id` replay on capture
+
+- Same key, same body: PayPal returned the original capture (same id `8YA11454UG211983H`, `COMPLETED`). Retries are safe.
+- **Same key, different body (amount 1.00 instead of 3.00): PayPal again returned the original capture id, but the response body echoed `amount.value: "1.00"`.** `GET /v2/payments/captures/{id}` shows the real capture is 3.00, and the authorization is `CAPTURED` for 3.00. PayPal did not return `PAYPAL_REQUEST_ID_PREVIOUSLY_USED` here.
+- **Fix (design rule):** a key is bound to one exact request. Settlement stores the amount on the `PaymentRecord` together with its idempotency key and never changes it; a different amount means a new attempt and a new key. After every capture, confirm the amount with a GET before recording it.
+- A new key after a final capture: `422 AUTHORIZATION_ALREADY_CAPTURED`. Not retried (correct per explain-error: one capture after `final_capture: true`).
+
+### C8: Payouts duplicate behavior
+
+- A re-send with the same `sender_batch_id` is rejected with **400 `USER_BUSINESS_ERROR`**, `details[0].field: SENDER_BATCH_ID`, issue "Batch with given sender_batch_id already exists", with **both a new and the same `PayPal-Request-Id`**. The response has an empty `links` array, contrary to the OpenAPI note promising a HATEOAS link to the original batch.
+- No money moved twice: both smoke batches (`DAH3234Y3E8XS`, `TDZJHBCZHZKHG`, one per run) ended `SUCCESS`, 1.00 each, fee 0.25.
+- `/paypal:explain-error`: `USER_BUSINESS_ERROR` is not in the toolkit's error reference; it says to check the Payouts API errors page. The behavior matches the `sender_batch_id` rule in the OpenAPI spec (rejected if used in the last 30 days).
+- **Fix:** `isDuplicatePayoutBatch()` in the adapter detects this shape. Settlement (Task 11) must treat it as "already sent", never as a failure that justifies a re-send. The payout batch id is persisted in transaction 2; after a crash between POST and transaction 2, recover it from the `PAYMENT.PAYOUTSBATCH.*` / `PAYMENT.PAYOUTS-ITEM.*` webhook (which carries `sender_batch_id`), not by re-POSTing.
+- Smoke-script bug found on the way: the first version expected the same-key replay to succeed and threw; fixed to expect the rejection.
+
+### C11: declined payment simulation
+
+- `PayPal-Mock-Response: {"mock_application_codes":"INSTRUMENT_DECLINED"}` on a card order create returns `422 UNPROCESSABLE_ENTITY` / `INSTRUMENT_DECLINED` (debug_id `70c28ae654da`), with negative testing **off** on the account. Not retried by the HTTP layer (correct).
+- `/paypal:explain-error INSTRUMENT_DECLINED`: the buyer's payment method was declined; ask for a different method, never retry the same instrument. Paylock maps it to FUNDING → CANCELLED with the reason shown.

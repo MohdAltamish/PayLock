@@ -73,7 +73,9 @@ PayPal has no native escrow for this use case. Authorize-then-capture holds fund
 
 Documented lifecycle (RulesHub authorize-order mapping): a 3-day honor period (guaranteed hold), and the authorization expires after 29 days; capture after the honor period may still be attempted but funds are not guaranteed.
 
-**Sandbox observation (Day 1, C5): PENDING.** Record `create_time` and `expiration_time` from a real sandbox authorization here, set `AUTH_SAFE_WINDOW_HOURS` from it, and cap contract deadlines to that window. Until recorded, the default is 72 hours (the documented honor period). Also record here: whether `final_capture: true` on a partial capture releases the remainder (C6).
+**Sandbox observation (2026-11-05, C5):** three sandbox authorizations (card-funded, US business account) all had `expiration_time` exactly 29 days (696 hours) after `create_time`, e.g. created `2026-11-05T13:00:29Z`, expires `2026-12-04T13:00:29Z`. The 3-day honor period is a funds guarantee that the API does not expose, so it cannot be observed directly. Decision: `AUTH_SAFE_WINDOW_HOURS = 72`. Contract deadlines are capped to 72 hours after authorization so capture happens inside the honor period; the stored `expiration_time` drives the "reservation expired" path. Reauthorization is out of scope.
+
+**Partial capture (C6): PENDING.** Needs a buyer-approved order; record whether `final_capture: true` on a 70.00 capture of a 100.00 authorization releases the remaining 30.00.
 
 ### ADR-002: Modular monolith
 One service, clear module boundaries. Faster to build, deploy, and demo. Agents can be extracted later.

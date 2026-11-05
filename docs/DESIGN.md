@@ -455,6 +455,8 @@ Policy caps are not risk signals. Exceeding `maxPerDeal` or `dailyCap` is a poli
 ## 8. Idempotency and retries
 
 - `PayPal-Request-Id = sha256(dealId:action:attempt)`, where `attempt` is a stored logical attempt on the `PaymentRecord`, not the HTTP retry count. HTTP retries reuse the same key.
+- A key is bound to one exact request body. The `PaymentRecord` stores the amount with its key and it never changes; a different amount needs a new attempt. Observed in sandbox: replaying a capture key with a different amount returns the original capture id while echoing the new amount, so always confirm a capture's amount with `GET /v2/payments/captures/{id}` (pitfalls.md, C7).
+- Payout duplicates: a re-send with a used `sender_batch_id` returns 400 `USER_BUSINESS_ERROR` (`details[].field = SENDER_BATCH_ID`) even with the same `PayPal-Request-Id`, and no link to the original batch. `isDuplicatePayoutBatch()` treats it as "already sent". After a crash, the batch id is recovered from the payout webhook, never by re-POSTing (pitfalls.md, C8).
 - Retries: 3 retries (4 tries total), exponential backoff with jitter, 500ms base, on 429, 5xx, network errors and `PREVIOUS_REQUEST_IN_PROGRESS`. Honor `Retry-After`. Never retry other 4xx (`INSTRUMENT_DECLINED`, `TRANSACTION_REFUSED` and validation errors fail immediately).
 - `debug_id` is logged on every PayPal error.
 - Payouts: `sender_batch_header.sender_batch_id = paylock-{dealId}-{attempt}`; PayPal rejects any `sender_batch_id` reused within 30 days, so a re-send increments `attempt`. `items[0].sender_item_id = dealId` on every attempt so re-sends stay traceable.
