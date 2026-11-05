@@ -4,9 +4,11 @@ import { healthRoutes, type HealthCheck } from "./health/routes.js";
 import { loggerOptions } from "./lib/logger.js";
 import { registerProblemHandlers } from "./lib/problem.js";
 import { genRequestId } from "./lib/request-id.js";
+import { webhookRoutes, type WebhookRouteDeps } from "./webhooks/route.js";
 
 export interface AppDeps {
   healthChecks: Record<string, HealthCheck>;
+  webhooks?: WebhookRouteDeps;
 }
 
 export interface BuildAppOptions {
@@ -39,6 +41,7 @@ export async function buildApp({
 
   registerProblemHandlers(app);
   await app.register(healthRoutes, { checks: deps.healthChecks });
+  if (deps.webhooks) await app.register(webhookRoutes, deps.webhooks);
 
   return app;
 }

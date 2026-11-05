@@ -72,3 +72,22 @@ Platform payee confirmed: every smoke order's `purchase_units[0].payee.email_add
 
 - `PayPal-Mock-Response: {"mock_application_codes":"INSTRUMENT_DECLINED"}` on a card order create returns `422 UNPROCESSABLE_ENTITY` / `INSTRUMENT_DECLINED` (debug_id `70c28ae654da`), with negative testing **off** on the account. Not retried by the HTTP layer (correct).
 - `/paypal:explain-error INSTRUMENT_DECLINED`: the buyer's payment method was declined; ask for a different method, never retry the same instrument. Paylock maps it to FUNDING → CANCELLED with the reason shown.
+
+## 2026-11-05: Webhooks end to end (Task 5)
+
+- `scripts/webhook-register.ts` → `GET /v1/notifications/webhooks-event-types`: all 15 of our event names are valid (C9). Created webhook `6CK65828D0701523J` for the ngrok URL.
+- Real deliveries from a card capture (`npm run smoke -- card-capture`): `PAYMENT.AUTHORIZATION.CREATED` and `PAYMENT.CAPTURE.PENDING` arrived about 14 s after the capture, both `verification_status: SUCCESS` from the raw bytes, stored and processed once.
+- `POST /v1/notifications/webhooks-events/{id}/resend` returned 202; the re-delivery arrived about **2 minutes** later with a new transmission id, verified, and was ignored as a duplicate by event id. Resend is slower than first delivery; tests must wait for it.
+- Forged requests: no PayPal headers → 400 without calling PayPal; fake signature headers → PayPal returned a non-SUCCESS status → 400, nothing stored.
+
+## 2026-11-05: Capture can come back `PENDING` / `PENDING_REVIEW`
+
+- **What:** a card-funded full capture (`3CK27531MS866704A`, 2.00 USD) returned `status: PENDING`, `status_details.reason: PENDING_REVIEW`, and `PAYMENT.CAPTURE.PENDING` instead of COMPLETED. Earlier identical captures completed immediately. Payment review is off on the business account.
+- **Explain-error:** not an error code (HTTP 201). `PENDING_REVIEW` is a capture status reason in the Payments v2 spec: PayPal is reviewing the payment.
+- **Fix (design, Task 11):** treat a PENDING capture as "Confirming with PayPal". Settlement does **not** send the payout until the capture is COMPLETED (from `PAYMENT.CAPTURE.COMPLETED` or a `GET /v2/payments/captures/{id}` poll). `PAYMENT.CAPTURE.DENIED` moves the deal to SETTLEMENT_ERROR. The demo uses PayPal-wallet approval, which has not shown this yet; card-funded e2e must tolerate it.
+
+## 2026-11-05: PayPal MCP server tool calls fail with `PAYPAL_API_SETUP_ERROR`
+
+- **What:** SSE connect and `tools/list` work with the app's own token (46 tools). Every tool call returns `{"ok":false,"code":"PAYPAL_API_SETUP_ERROR","message":"Unsupported cache mode: default"}` with `isError: false`. Streamable HTTP at `/http` returned 404.
+- **Explain-error:** `PAYPAL_API_SETUP_ERROR` is not a PayPal REST error code and is not in the toolkit's reference. The message suggests the MCP server's own HTTP client rejects a fetch `cache` option. This is server-side, not our credentials: the same token works for REST, including the reporting scope.
+- **Fix:** `scripts/mcp-list-tools.ts` detects `{"ok":false}` bodies and reports them as FAILED instead of OK (its first version reported OK). MCP enrichment is disabled; re-check at the start of Phase 3. Money movement never depended on MCP (ADR-008).

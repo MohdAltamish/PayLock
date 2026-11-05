@@ -1,7 +1,11 @@
 import { buildApp } from "./app.js";
 import { ConfigError, loadConfig } from "./config/env.js";
 import { closeDb, getDb, pingDb } from "./lib/db.js";
+import { PayPalHttp } from "./paypal/http.js";
 import { TokenProvider } from "./paypal/token.js";
+import { WebhookProcessor } from "./webhooks/processor.js";
+import { PrismaWebhookStore } from "./webhooks/store.js";
+import { PayPalWebhookVerifier } from "./webhooks/verify.js";
 
 async function main() {
   let config;
@@ -21,6 +25,17 @@ async function main() {
     clientId: config.paypal.clientId,
     clientSecret: config.paypal.clientSecret,
   });
+
+  // PayPal client and webhook processor log through the app logger once it exists.
+  const store = new PrismaWebhookStore(db);
+  const lazyLog = {
+    info: (o: object, m: string) => app.log.info(o, m),
+    warn: (o: object, m: string) => app.log.warn(o, m),
+    error: (o: object, m: string) => app.log.error(o, m),
+    debug: (o: object, m: string) => app.log.debug(o, m),
+  };
+  const http = new PayPalHttp({ baseUrl: config.paypal.baseUrl, tokens, log: lazyLog });
+
   const app = await buildApp({
     config,
     deps: {
@@ -31,8 +46,17 @@ async function main() {
           await tokens.getToken();
         },
       },
+      webhooks: {
+        verifier: config.paypal.webhookId
+          ? new PayPalWebhookVerifier(http, config.paypal.webhookId)
+          : undefined,
+        store,
+        processor: new WebhookProcessor(store, lazyLog),
+      },
     },
   });
+  if (!config.paypal.webhookId)
+    app.log.warn("PAYPAL_WEBHOOK_ID is not set; /webhooks/paypal will return 503");
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "shutting down");

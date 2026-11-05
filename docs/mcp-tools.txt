@@ -1,11 +1,152 @@
 PayPal sandbox MCP tool list
+Generated: 2026-11-05T13:18:53.644Z by scripts/mcp-list-tools.ts
+Endpoint:  https://mcp.sandbox.paypal.com/sse (SSE transport)
+Auth:      app client-credentials token (not the coding assistant's token)
+Server:    PayPal MCP Agent 1.0.0
+Tools:     46
 
-Status: PENDING. Generated in Phase 1 Task 5 by scripts/mcp-list-tools.ts, which connects
-to https://mcp.sandbox.paypal.com/sse with the app's own client-credentials token
-(never the coding assistant's token) and writes the tools/list result here.
+- accept_dispute_claim
+    Accept liability for a dispute claim. This tool is used to accept liability for a dispute claim. When you accept liability for a dispute cla
+    params: dispute_id, note
+- activate_recurring_series
+    Activate a recurring invoice series on PayPal. This function activates a recurring invoice series by its ID, moving it out of DRAFT status. 
+    params: recurring_series_id
+- cancel_invoice_auto_reminder
+    Cancel all scheduled automatic reminders for an invoice. This function permanently cancels every automatic reminder scheduled for a specific
+    params: invoice_id
+- cancel_recurring_series
+    Cancel a recurring invoice series on PayPal. This function cancels a recurring invoice series by its ID. Once cancelled, PayPal stops genera
+    params: recurring_series_id
+- cancel_sent_invoice
+    Cancel a sent invoice. This function cancels an invoice that has already been sent to the recipient(s).
+    params: invoice_id, note, send_to_recipient, additional_recipients
+- cancel_subscription
+    Cancel a customer subscription in PayPal. This function cancels an active subscription for a customer. It requires the subscription ID and a
+    params: subscription_id, payload
+- create_conditional_rules_for_invoice
+    Create conditional rules for an invoice on PayPal.
+    params: invoice_id, rules
+- create_invoice
+    Create Invoices on PayPal. This function creates a draft invoice, specifying a currency code, the invoicer's business information, one or mo
+    params: currency_code, invoice_number, invoice_date, reference, note, invoicer_business_name, invoicer_given_name, invoicer_surname, invoicer_email_address, invoicer_tax_id, invoicer_address_line_1, invoicer_address_line_2, invoicer_city, invoicer_state, invoicer_postal_code, invoicer_country_code, primary_recipients, items, allow_tip, theme_color, shipping_cost, enable_pay_by_bank, pay_by_bank_exclusive_above_threshold, allow_partial_payment, minimum_partial_payment_amount
+- create_order
+    Create an order in PayPal. This tool is used to create a new order in PayPal. This is typically the first step in initiating a payment flow.
+    params: currencyCode, items, discount, shippingCost, shippingAddress, notes, returnUrl, cancelUrl
+- create_product
+    Create a product in PayPal using product catalog - create products API. This function creates a new product that will be used in subscriptio
+    params: name, type, description, category, image_url, home_url
+- create_recurring_series
+    Create a recurring invoice series on PayPal. This function creates a recurring invoice series that automatically generates and sends invoice
+    params: interval_unit, interval_count, start_series_date, total_cycles, reference, currency_code, note, invoicer_business_name, invoicer_given_name, invoicer_surname, invoicer_email_address, invoicer_tax_id, invoicer_address_line_1, invoicer_address_line_2, invoicer_city, invoicer_state, invoicer_postal_code, invoicer_country_code, primary_recipients, items, allow_tip, shipping_cost, allow_partial_payment, minimum_partial_payment_amount
+- create_refund
+    Initiate a refund for a PayPal payment capture. If you have an order ID instead of a capture ID, first use the get order tool to obtain the 
+    params: capture_id, amount, invoice_id, note_to_payer
+- create_shipment_tracking
+    Create a shipment for a transaction in PayPal. This function creates a shipment record for a specific transaction, allowing you to track the
+    params: order_id, tracking_number, transaction_id, status, carrier
+- create_subscription
+    Create a subscription in PayPal using the subscription - create subscription API. This function allows you to create a new subscription for 
+    params: plan_id, quantity, shipping_amount, subscriber, application_context
+- create_subscription_plan
+    Create a subsctiption plan in PayPal using subscription - create plan API. This function creates a new subscription plan that defines pricin
+    params: product_id, name, description, billing_cycles, payment_preferences, taxes
+- delete_invoice
+    Delete a draft or scheduled invoice on PayPal. This function permanently deletes an invoice that is in the draft or scheduled state, by ID. 
+    params: invoice_id
+- delete_recurring_series
+    Delete a recurring invoice series on PayPal. This function permanently deletes a recurring invoice series by its ID. Only series in DRAFT st
+    params: recurring_series_id
+- generate_invoice_number
+    Generate the next invoice number available to the merchant. This function generates the next invoice number by using the prefix and suffix f
+    params: (none)
+- generate_invoice_qr_code
+    Generate a QR code for an invoice. This function generates a QR code for an invoice, which can be used to pay the invoice using a mobile dev
+    params: invoice_id, width, height
+- get_dispute
+    Get details for a specific dispute from PayPal. This tool is used to lists disputes with a summary set of details, which shows the dispute_i
+    params: dispute_id
+- get_invoice
+    Get an invoice from PayPal. This function retrieves details of a specific invoice using its ID.
+    params: invoice_id
+- get_merchant_insights
+    Retrieve business intelligence metrics and analytics for a merchant, filtered by start date, end date, insight type, and time interval. This
+    params: start_date, end_date, insight_type, time_interval
+- get_order
+    Retrieves the order details from PayPal for a given order ID. This tool is used to retrieve details of an existing order in PayPal. It provi
+    params: id
+- get_recurring_series
+    Get a recurring invoice series from PayPal. This function retrieves details of a specific recurring invoice series using its ID, including i
+    params: recurring_series_id
+- get_refund
+    Retrieve detailed information about a PayPal payment refund. If you have an order ID instead of a refund ID, first use the get order tool to
+    params: refund_id
+- get_shipment_tracking
+    Get tracking information for a shipment by ID. This function retrieves tracking information for a specific shipment using the transaction ID
+    params: order_id, transaction_id
+- list_disputes
+    List disputes from PayPal. This function retrieves a list of disputes with optional pagination and filtering parameters.
+    params: disputed_transaction_id, dispute_state, page_size, page
+- list_invoices
+    List invoices from PayPal. This function retrieves a list of invoices with optional pagination parameters.
+    params: page, page_size, total_required
+- list_products
+    List products from PayPal. This function retrieves a list of products with optional pagination parameters.
+    params: page, page_size, total_required
+- list_subscription_plans
+    List subscription plans from PayPal. This function retrieves a list of subscription plans with optional product filtering and pagination par
+    params: product_id, page, page_size, total_required
+- list_transactions
+    List transactions from PayPal. This tool is used to list transactions with optional filtering parameters within a date range of 31 days. Thi
+    params: transaction_id, transaction_status, start_date, end_date, search_months, page_size, page
+- pay_order
+    Capture a payment for an order. This tool is used to capture a payment for an order. It allows you to capture funds that have been authorize
+    params: id
+- record_payment_for_invoice
+    Record a payment for an invoice on PayPal. This function records an external or manual payment (for example, cash, check, bank transfer, or 
+    params: invoice_id, payment_id, payment_date, payment_date_time, method, note, amount, shipping_info
+- record_refund_for_invoice
+    Record a refund for an invoice on PayPal. This function records a refund against an invoice, by invoice ID. If all payments made against the
+    params: invoice_id, refund_date, amount, method
+- search_invoicing
+    Search for invoices or recurring invoice series on PayPal. Use resource_type "invoice" with invoice_filters, or "recurring_series" with recu
+    params: resource_type, page, page_size, total_required, invoice_filters, recurring_series_filters
+- send_invoice
+    Send an invoice to the recipient(s). This function sends a previously created invoice to its intended recipients.
+    params: invoice_id, note, send_to_recipient, additional_recipients
+- send_invoice_reminder
+    Send a reminder for an invoice. This function sends a reminder for an invoice that has already been sent but hasn't been paid yet.
+    params: invoice_id, subject, note, additional_recipients
+- setup_invoice_auto_reminders
+    Initialize the invoice auto reminder configuration for the merchant's PayPal account. This function sets up automatic reminders for unpaid i
+    params: configurations
+- show_product_details
+    List products from PayPal. This function retrieves a list of products with optional pagination parameters.
+    params: product_id
+- show_subscription_details
+    Show subscription details from PayPal. This function retrieves the details of a specific subscription using its ID. Required parameters are:
+    params: subscription_id, get_additional_details
+- show_subscription_plan_details
+    Show subscription plan details from PayPal. This function retrieves the details of a specific subscription plan using its ID. Required param
+    params: plan_id
+- update_invoice_auto_reminder
+    Update an existing invoice auto reminder configuration by its configuration ID. This function performs a full update of the reminder configu
+    params: reminder_configuration_id, type, status, interval, repetition, notification
+- update_invoicing
+    Update an existing invoice or recurring invoice series on PayPal. For invoices, the recipient (primary_recipients) can only be changed 2 tim
+    params: resource_type, invoice_update, recurring_series_update
+- update_product
+    Update a product in PayPal. This function updates an existing product using JSON Patch operations.
+    params: product_id, operations
+- update_shipment_tracking
+    Update tracking information for a shipment by ID and status. This tool updates tracking information such as the carrier or the tracking numb
+    params: transaction_id, tracking_number, new_tracking_number, status, carrier
+- update_subscription
+    Update a customer subscription in PayPal. This function updates an active or suspended subscription for a customer. It requires the subscrip
+    params: subscription_id, currency_code, outstanding_balance, custom_id, fixed_price, payment_failure_threshold, auto_bill_outstanding, taxes_inclusive, taxes_percentage, shipping_amount, shipping_address
 
-Expected from the toolkit inventory (references/mcp-tools.md), not yet confirmed live:
-  orders/payments: create_order, pay_order          (never called at runtime: writes)
-  disputes:        list_disputes, get_dispute        (candidate for mcp_get_disputes)
-  reporting:       list_transactions                 (candidate for mcp_list_transactions)
-  invoices, subscriptions, catalog, shipment tools   (not used)
+Read-only probes (status only; results are not recorded):
+- list_disputes: FAILED (PAYPAL_API_SETUP_ERROR: Unsupported cache mode: default)
+- list_transactions: FAILED (PAYPAL_API_SETUP_ERROR: Unsupported cache mode: default)
+
+Paylock policy: MCP tools are read-only enrichment at runtime. Write tools
+(create_order, pay_order, invoices, subscriptions, ...) are never called.

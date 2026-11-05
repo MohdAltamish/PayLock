@@ -23,8 +23,8 @@ Each skill is a typed function. Skills are side-effect classified; agents only e
 | `restore_pii` | util | `(text, map) -> text` | Reverse tokens for UI | LLM client middleware |
 | `write_audit` | util | `(entry) -> void` | Append audit row | All modules |
 | `mcp_list_tools` | util | `() -> ToolDescriptor[]` | Startup check and `scripts/mcp-list-tools.ts`; lists tools exposed by the PayPal sandbox MCP server; saved to `docs/mcp-tools.txt` | Boot |
-| `mcp_get_disputes` | read | `(filters) -> Dispute[]` | Expected MCP tools: `list_disputes`, `get_dispute` (toolkit inventory). **Pending live confirmation on Day 1 (C2)**: rename to the real tool name or delete this row. Feeds DISPUTES signal | Guardian |
-| `mcp_list_transactions` | read | `(range) -> Transaction[]` | Expected MCP tool: `list_transactions`. **Pending live confirmation (C3)**; a 403 means Transaction Search must be enabled. Reconciliation and demo "PayPal says" panel | Buyer/Seller agents (P1) |
+| `mcp_get_disputes` | read | `(filters) -> Dispute[]` | Maps to MCP tools `list_disputes` (params: `disputed_transaction_id`, `dispute_state`, `page_size`, `page`) and `get_dispute`. **Confirmed exposed (C2, 2026-11-05), but not working in sandbox**: every call returns `{"ok":false,"code":"PAYPAL_API_SETUP_ERROR","message":"Unsupported cache mode: default"}`. Disabled until a re-check shows it working; the DISPUTES signal uses `TrustProfile.disputes` meanwhile. See docs/mcp-tools.txt | Guardian |
+| `mcp_list_transactions` | read | `(range) -> Transaction[]` | Maps to MCP tool `list_transactions` (params: `transaction_id`, `transaction_status`, `start_date`, `end_date`, `search_months`, `page_size`, `page`). **Confirmed exposed (C3), same `PAYPAL_API_SETUP_ERROR`.** Transaction Search is enabled on the app, and REST `GET /v1/reporting/balances` works, so the failure is on the MCP server side. Disabled until re-checked | Buyer/Seller agents (P1) |
 
 ## Safety rules for skills
 

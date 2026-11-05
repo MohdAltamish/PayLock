@@ -9,3 +9,19 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Verified PayPal webhook deliveries, deduplicated by PayPal's event id
+// (invariant 3). Only events that passed signature verification are stored.
+model WebhookEvent {
+  eventId     String    @id
+  eventType   String
+  resourceId  String?
+  dealId      String?
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  attempts    Int       @default(0)
+  raw         Json
+
+  @@index([processedAt])
+  @@index([dealId])
+}

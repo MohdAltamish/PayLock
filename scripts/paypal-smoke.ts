@@ -4,6 +4,7 @@
  *   token           mint a token, check scopes and cache
  *   balance         platform balance pre-check (GET /v1/reporting/balances)
  *   card-authorize  C13: AUTHORIZE order funded by a sandbox card (no buyer popup), then void
+ *   card-capture    card-funded authorize + capture (real PAYMENT.CAPTURE.COMPLETED webhook)
  *   honor           C5: record authorization create_time / expiration_time, then void
  *   idempotency     C7: replay a capture with the same PayPal-Request-Id; then same id, different body
  *   decline         C11: sandbox negative test (PayPal-Mock-Response INSTRUMENT_DECLINED)
@@ -210,6 +211,21 @@ function normalize(v: string): string {
   return /^\d+$/.test(v) ? `${v}.00` : /^\d+\.\d$/.test(v) ? `${v}0` : v;
 }
 
+/** Card-funded authorize + full capture. Fires a real, verifiable PAYMENT.CAPTURE.COMPLETED webhook. */
+async function cardCapture() {
+  const dealId = newDealId();
+  const a = await cardAuthorization(dealId, "2.00");
+  const c = await adapter.captureAuthorization(approval, {
+    dealId,
+    authorizationId: a.id,
+    amount: "2.00",
+    finalCapture: true,
+    requestId: key(dealId, "capture"),
+  });
+  line("capture", `${c.id} (${c.status}) final_capture=${c.final_capture}`);
+  line("paypal fee", c.seller_receivable_breakdown?.paypal_fee?.value);
+}
+
 async function cardAuthorize() {
   const dealId = newDealId();
   const a = await cardAuthorization(dealId, "2.00");
@@ -396,6 +412,7 @@ const flows: Record<string, () => Promise<unknown>> = {
   token,
   balance: () => balance(),
   "card-authorize": cardAuthorize,
+  "card-capture": cardCapture,
   honor,
   idempotency,
   decline,

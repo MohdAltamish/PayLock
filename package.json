@@ -27,10 +27,13 @@
     "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
     "db:deploy": "prisma migrate deploy --schema apps/api/prisma/schema.prisma",
     "smoke": "tsx --env-file=.env scripts/paypal-smoke.ts",
+    "webhook:register": "tsx --env-file=.env scripts/webhook-register.ts",
+    "mcp:list-tools": "tsx --env-file=.env scripts/mcp-list-tools.ts",
     "postinstall": "prisma generate --schema apps/api/prisma/schema.prisma"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@types/node": "20.19.43",
     "eslint": "9.39.5",
     "globals": "17.14.0",
