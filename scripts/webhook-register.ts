@@ -79,8 +79,16 @@ const eventBody = events.map((name) => ({ name }));
 const same = hooks.find((h) => h.url === target);
 const ngrokHook = isNgrok(target) ? hooks.find((h) => isNgrok(h.url)) : undefined;
 
+const sameEvents = (h: Webhook) =>
+  h.event_types.length === events.length &&
+  events.every((n) => h.event_types.some((e) => e.name === n));
+
 let id: string;
-if (same) {
+if (same && sameEvents(same)) {
+  // PATCH with identical values is rejected with 400 WEBHOOK_PATCH_REQUEST_NO_CHANGE.
+  id = same.id;
+  console.log(`Reused ${id}: same URL and event types, nothing to change.`);
+} else if (same) {
   await http.request({
     method: "PATCH",
     path: `/v1/notifications/webhooks/${same.id}`,

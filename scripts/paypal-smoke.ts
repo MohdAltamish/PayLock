@@ -9,9 +9,12 @@
  *   idempotency     C7: replay a capture with the same PayPal-Request-Id; then same id, different body
  *   decline         C11: sandbox negative test (PayPal-Mock-Response INSTRUMENT_DECLINED)
  *   payout          balance pre-check, then 1.00 USD to the sandbox seller; C8 duplicate re-send
- *   capture         buyer-approved order: authorize, capture in full   (needs sandbox buyer login)
- *   void            buyer-approved order: authorize, void               (needs sandbox buyer login)
+ *   capture         buyer-approved 10.00 order: authorize, capture in full
+ *   void            buyer-approved 5.00 order: authorize, void
  *   partial         C6: buyer-approved 100.00, capture 70.00 final_capture=true, check remainder
+ *
+ * Buyer-approved flows are two-step: run once to get the approve link, log in
+ * as the sandbox buyer, then re-run with `--order <id>`.
  *
  * Money-moving calls use SmokeApproval (scripts only). Never prints tokens,
  * secrets or card numbers. On a PayPal error: run /paypal:explain-error.
@@ -59,6 +62,37 @@ function payee(order: Order) {
   return order.purchase_units?.[0]?.payee?.email_address;
 }
 
+/**
+ * Buyer-approved flows run in two steps so a restart never loses state:
+ *   npm run smoke -- <flow>              creates the order, prints the approve link, exits
+ *   npm run smoke -- <flow> --order <id> after approval: checks the order and continues
+ * Returns undefined after step 1.
+ */
+async function walletDeal(amount: string): Promise<{ dealId: string; order: Order } | undefined> {
+  const i = process.argv.indexOf("--order");
+  const orderId = i > 0 ? process.argv[i + 1] : undefined;
+  if (!orderId) {
+    const dealId = newDealId();
+    await walletOrder(dealId, amount);
+    console.log(
+      `  Then resume with: npm run smoke -- ${process.argv[2]} --order <order id above>\n`,
+    );
+    return undefined;
+  }
+  const order = await waitForApproval(orderId, 60_000);
+  const unit = order.purchase_units?.[0];
+  const dealId = unit?.custom_id ?? "";
+  // Same checks /deals/:id/authorize will make: our order, our amount, our currency.
+  if (!dealId.startsWith("smoke"))
+    throw new Error(`Order ${orderId} is not a smoke order (custom_id ${dealId || "-"})`);
+  if (unit?.amount?.value !== amount || unit.amount.currency_code !== "USD") {
+    throw new Error(
+      `Order ${orderId} is ${unit?.amount?.value} ${unit?.amount?.currency_code}, expected ${amount} USD for this flow`,
+    );
+  }
+  return { dealId, order };
+}
+
 async function walletOrder(dealId: string, amount: string) {
   const { order, approveUrl } = await adapter.createOrder({
     dealId,
@@ -76,9 +110,9 @@ async function walletOrder(dealId: string, amount: string) {
     `\n  Approve as the sandbox buyer (${process.env.PAYPAL_SANDBOX_BUYER_EMAIL ?? "buyer account"}):\n  ${approveUrl}\n`,
   );
   console.log(
-    "  The page redirects to paylock.dev/smoke/return afterwards; that page may not exist. That is expected.\n",
+    "  The page redirects to paylock.dev/smoke/return afterwards; that page may not exist. That is expected.",
   );
-  return waitForApproval(order.id);
+  return order;
 }
 
 async function waitForApproval(orderId: string, timeoutMs = 15 * 60_000): Promise<Order> {
@@ -358,8 +392,9 @@ async function payout() {
 }
 
 async function capture() {
-  const dealId = newDealId();
-  const order = await walletOrder(dealId, "10.00");
+  const deal = await walletDeal("10.00");
+  if (!deal) return;
+  const { dealId, order } = deal;
   const a = await authorize(dealId, order.id);
   const c = await adapter.captureAuthorization(approval, {
     dealId,
@@ -374,15 +409,17 @@ async function capture() {
 }
 
 async function voidFlow() {
-  const dealId = newDealId();
-  const order = await walletOrder(dealId, "5.00");
+  const deal = await walletDeal("5.00");
+  if (!deal) return;
+  const { dealId, order } = deal;
   const a = await authorize(dealId, order.id);
   await voidQuietly(dealId, a.id);
 }
 
 async function partial() {
-  const dealId = newDealId();
-  const order = await walletOrder(dealId, "100.00");
+  const deal = await walletDeal("100.00");
+  if (!deal) return;
+  const { dealId, order } = deal;
   const a = await authorize(dealId, order.id);
   const c = await adapter.captureAuthorization(approval, {
     dealId,

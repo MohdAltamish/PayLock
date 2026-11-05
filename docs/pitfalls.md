@@ -91,3 +91,14 @@ Platform payee confirmed: every smoke order's `purchase_units[0].payee.email_add
 - **What:** SSE connect and `tools/list` work with the app's own token (46 tools). Every tool call returns `{"ok":false,"code":"PAYPAL_API_SETUP_ERROR","message":"Unsupported cache mode: default"}` with `isError: false`. Streamable HTTP at `/http` returned 404.
 - **Explain-error:** `PAYPAL_API_SETUP_ERROR` is not a PayPal REST error code and is not in the toolkit's reference. The message suggests the MCP server's own HTTP client rejects a fetch `cache` option. This is server-side, not our credentials: the same token works for REST, including the reporting scope.
 - **Fix:** `scripts/mcp-list-tools.ts` detects `{"ok":false}` bodies and reports them as FAILED instead of OK (its first version reported OK). MCP enrichment is disabled; re-check at the start of Phase 3. Money movement never depended on MCP (ADR-008).
+
+## 2026-11-05: `WEBHOOK_PATCH_REQUEST_NO_CHANGE` (400) when re-registering
+
+- **What:** re-running `webhook:register` for the same URL PATCHed identical event types; PayPal returned 400 `WEBHOOK_PATCH_REQUEST_NO_CHANGE` ("No change in webhook", debug_id `f639214cbba56`).
+- **Explain-error:** not in the toolkit's reference; the name is self-explanatory. Related documented errors: `WEBHOOK_URL_ALREADY_EXISTS` (reuse or PATCH instead of creating) and the 10-webhook limit.
+- **Fix:** the script now skips the PATCH when the URL and event set already match. Also observed: this ngrok account has a stable `*.ngrok-free.dev` domain, so restarting ngrok does not change the webhook URL.
+
+## 2026-11-05: Buyer-approved smoke flows made resumable
+
+- **What:** the `capture`, `void` and `partial` flows waited in-process for the buyer to approve; when the background processes were killed, the waiting orders were orphaned (no money moved; they stay `PAYER_ACTION_REQUIRED` and expire).
+- **Fix:** two-step flows. `npm run smoke -- <flow>` creates the order and prints the approve link; after approval, `npm run smoke -- <flow> --order <id>` checks that the order is a smoke order with the expected amount and USD, then continues.
