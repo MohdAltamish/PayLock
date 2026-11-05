@@ -16,7 +16,7 @@ Freelancers get stiffed. Buyers get scammed. Payments and trust live in differen
 2. **Guard**: the Trust Guardian scores counterparty and message risk and warns the buyer before funds are locked.
 3. **Lock**: funds are authorized via PayPal Orders v2 and held.
 4. **Verify**: the Verifier agent checks the delivered work against each criterion and explains its decision.
-5. **Release**: on pass, Paylock captures the authorization and pays the seller via PayPal Payouts. On fail, it voids the authorization. Partial passes pay proportionally.
+5. **Release**: on pass, deterministic settlement code (not an LLM) captures the authorization and pays the seller via PayPal Payouts. On fail, it voids the authorization. Partial passes capture a proportional amount once and PayPal releases the rest. Agents recommend; the platform enforces policy and moves money.
 6. **Audit**: every agent decision, warning, override, and payment is logged and visible on the deal timeline.
 
 ## Stack
@@ -24,12 +24,13 @@ Freelancers get stiffed. Buyers get scammed. Payments and trust live in differen
 - Next.js 14 (App Router, TypeScript) frontend
 - Node.js 20 + Fastify API
 - PostgreSQL 16 + Prisma
-- PayPal Orders v2, Payouts v1, Webhooks, PayPal Agent Toolkit / MCP server (sandbox)
+- PayPal Orders v2 and Payments v2 (authorize, capture, void), Payouts v1, Webhooks v1, JS SDK v6 (sandbox)
+- PayPal MCP server, read-only, for reconciliation (if confirmed in `docs/mcp-tools.txt`)
 - LLM with tool calling (OpenAI-compatible or Anthropic SDK, configurable)
 - Render (hosting)
 
 ## Built with the PayPal AI Toolkit
-Development used the [PayPal AI Toolkit](https://github.com/paypal/AI-Toolkit) (Apache-2.0) for best-practices guidance and sandbox MCP access. Commands used: `/paypal:setup`, `/paypal:sandbox`, `/paypal:test-accounts`, `/paypal:explain-error`, `/paypal:doctor`. (Edit this list to match what you actually used.)
+Development used the [PayPal AI Toolkit](https://github.com/paypal/AI-Toolkit) (Apache-2.0) for best-practices guidance. The toolkit is referenced, not vendored; no toolkit files are copied into this repo. Commands used: (updated in Phase 6 to list only the commands actually used).
 
 ## Quick start
 
@@ -49,6 +50,8 @@ See [docs/INSTRUCTIONS.md](docs/INSTRUCTIONS.md).
 | [UI/UX](docs/UI_UX.md) | Screens, states, design system |
 | [Security & Privacy](docs/SECURITY_PRIVACY.md) | Threat model, controls, data handling |
 | [Instructions](docs/INSTRUCTIONS.md) | Setup, run, test, deploy |
+| [Build Plan](docs/BUILD_PLAN.md) | Approved build plan, decisions, cut list |
+| [PayPal pitfalls](docs/pitfalls.md) | Every PayPal error hit during the build and its fix |
 | [Demo Script](docs/DEMO_SCRIPT.md) | 3-minute video plan |
 
 ## License

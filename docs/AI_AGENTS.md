@@ -14,11 +14,13 @@
 | Agent | Trigger | Input | Output | Tools |
 |-------|---------|-------|--------|-------|
 | Negotiator | Deal created | NL request, optional seller reply | `ContractOut` | `estimate_market_price`, `get_counterparty_profile` |
-| Trust Guardian | Before funding | Contract, counterparty TrustProfile, messages, payment metadata | `RiskOut` | `get_trust_profile`, `get_deal_velocity`, `get_paypal_verification` |
-| Verifier | Deliverable submitted | Contract criteria, deliverable | `DecisionOut` | `fetch_url`, `inspect_repo`, `run_checks`, `read_file` |
-| Settlement (deterministic) | Decision stored | Decision, auth id | PaymentRecords | `paypal_capture`, `paypal_void`, `paypal_payout` |
-| Buyer Agent (P1) | API | Goal, budget | Deal requests | PayPal MCP tools, Paylock API |
-| Seller Agent (P1) | API | Capability list | Counter-offers, deliverables | PayPal MCP tools, Paylock API |
+| Trust Guardian | Before funding | Contract, counterparty TrustProfile, messages, payment metadata | `RiskOut` | `get_counterparty_profile`, `get_deal_velocity`, `get_paypal_verification`, optional `mcp_get_disputes` |
+| Verifier | Deliverable submitted | Contract criteria, deliverable | `DecisionOut` | `fetch_url`, `inspect_repo`, `run_checks` (local only), `read_file` |
+| Settlement (deterministic) | Decision stored | Decision, auth id | PaymentRecords | `paypal_capture`, `paypal_void`, `paypal_payout`, `paypal_refund` (P2) |
+| Buyer Agent (P1) | API | Goal, budget | Deal requests | Read-only PayPal MCP tools, Paylock API |
+| Seller Agent (P1) | API | Capability list | Counter-offers, deliverables | Read-only PayPal MCP tools, Paylock API |
+
+**How tools are called.** By default the orchestrator, not the LLM, calls the read-only skills and fences the results into the prompt as `<TOOL_RESULT>` blocks (decision H). This keeps runs repeatable. An optional bounded tool loop for the Verifier (read-only skills, max 4 calls, `VERIFIER_TOOL_LOOP=1`, recorded via replay) is added only after the eval passes. No agent ever receives a write skill.
 
 ## 1. Negotiator
 
@@ -40,6 +42,8 @@ Rules:
 Input: "Need a landing page for my bakery, mobile friendly, with a contact form, by Friday, budget $300."
 Output criteria: responsive at 375px and 1280px (automatic), contact form submits and shows confirmation (automatic), bakery branding and menu section present (llm), delivered as deployable repo or hosted URL (automatic).
 
+**Price**: `price` is a Decimal string (e.g. `"300.00"`) and `currency` is `"USD"`. Requests in other currencies are rejected with an ambiguity in the demo.
+
 **Failure handling**: schema invalid -> retry once with error message appended -> if still invalid, return draft with `ambiguities: ["Could not structure request"]` and require buyer edit.
 
 ## 2. Trust Guardian
@@ -52,7 +56,9 @@ Output criteria: responsive at 375px and 1280px (automatic), contact form submit
 3. LLM evaluates redacted text against the social-engineering rubric, returning LLM signals with confidence.
 4. Combine: `score = clamp(sum(rule weights) + sum(llm weight * confidence))`.
 5. Level and action: LOW -> allow, MEDIUM -> require_approval, HIGH -> block.
-6. Policy Engine additionally applies spend caps.
+6. Policy Engine additionally applies spend caps and `allowMediumRisk` (when true, MEDIUM funds autonomously like LOW; signals are still logged).
+
+**Fallback**: if the LLM output fails validation twice, the Guardian uses rule signals only, marks the assessment `fallback`, and raises the level to at least MEDIUM when the deal has messages (decision E).
 
 **System prompt (core)**:
 ```
@@ -66,14 +72,14 @@ Output JSON matching RiskOut.llmSignals only.
 
 **Warning copy generation**: the `summary` must be user-facing, plain language, under 400 characters, listing the top 3 signals and the recommended action. Example: "This seller's account is 2 days old, their payout email changed 10 minutes ago, and their message asks you to pay a deposit outside Paylock. Risk: High. Recommended: do not fund."
 
-**Override**: buyer may override HIGH with a reason. Override is logged, visible on the timeline, and disables autonomous settlement for that deal (human must approve release).
+**Override**: buyer may override HIGH with a reason. Override is logged, visible on the timeline, and sets `requiresHumanRelease`: after verification the deal goes to NEEDS_REVIEW and a human must approve release. A policy-cap block (`POLICY_CAP`) cannot be overridden.
 
 ## 3. Verifier
 
 **Purpose**: determine whether the deliverable satisfies each acceptance criterion and compute a payout decision.
 
 **Pipeline**:
-1. For `automatic` criteria, run tools (`fetch_url` with viewport checks, `run_checks` for repo tests, HTTP status).
+1. For `automatic` criteria, run tools (`fetch_url` for HTTP status, meta-viewport and form presence; `run_checks` for repo tests when running locally). On the hosted app, criteria that need `run_checks` or real viewport rendering fall back to LLM judgment or `needsHumanReview` (ADR-010).
 2. For `llm` criteria, present deliverable content (redacted) and the criterion; model judges with evidence.
 3. `human` criteria default to unmet and set `needsHumanReview=true` unless buyer pre-approved.
 4. Score = weighted percentage of met criteria. Outcome: PASS if 100% and no human-review flags; PARTIAL if >= `partialPayMin`; FAIL otherwise.
@@ -92,15 +98,16 @@ Output JSON matching DecisionOut only.
 
 ## 4. Settlement (deterministic, no LLM)
 
-Given a stored `Decision`:
-- PASS -> `paypal_capture(auth, amount, final=true)` -> `paypal_payout(seller, amount)`.
-- PARTIAL -> capture `amount * payoutPercent/100` final -> payout same.
+Given a stored `Decision` (and `requiresHumanRelease = false`, or a human approval):
+- PASS -> `paypal_capture(auth, amount, final_capture=true)` -> `paypal_payout(seller, amount)`.
+- PARTIAL -> one capture of `round_down(amount * payoutPercent/100)` with `final_capture=true` (no void; PayPal releases the remainder) -> payout the captured amount.
 - FAIL -> `paypal_void(auth)`.
-All via idempotent adapter; results written to `PaymentRecord`; webhooks confirm.
+- Any step failing after retries -> SETTLEMENT_ERROR with a manual retry.
+All via the idempotent adapter using the two-transaction pattern (ADR-011); results written to `PaymentRecord`; the synchronous PayPal response moves state and webhooks confirm (ADR-009).
 
 ## 5. Buyer and Seller agents (P1, agent-to-agent demo)
 
-Thin LLM agents with tool access to the Paylock API and PayPal MCP server. Buyer Agent goal: "Procure X within $Y by Z." Seller Agent: accepts or counters, delivers from a fixture. Demonstrates the full loop with no human in the middle, bounded by the buyer's SpendPolicy. Both use PayPal MCP tools (`list_transactions`, `get_order`) for their own reconciliation to show PayPal AI tooling in use.
+Thin LLM agents with access to the Paylock API and read-only PayPal MCP tools. Buyer Agent goal: "Procure X within $Y by Z." Seller Agent: accepts or counters, delivers from a fixture. Bounded by the buyer's SpendPolicy. Both may use read-only MCP tools (`list_transactions`, if confirmed in `docs/mcp-tools.txt`) for their own reconciliation. Buyer approval of the PayPal order is never done through MCP (`pay_order` is not called): it happens in a browser through the v6 flow, or the path is scripted for the demo.
 
 ## 6. Evaluation (fixtures)
 
@@ -108,7 +115,7 @@ Thin LLM agents with tool access to the Paylock API and PayPal MCP server. Buyer
 - 4 honest deals (expect LOW, PASS)
 - 3 scam personas (expect HIGH: Fresh Account, Off-Platform Pusher, Overpayment Schemer)
 - 3 bad deliverables (expect FAIL or PARTIAL)
-Threshold: 10/10 schema-valid, 9/10 outcome-correct. Run before every deploy.
+Threshold: 10/10 schema-valid, 9/10 outcome-correct. Run before every deploy. Fixtures are recorded through the replay provider so e2e tests and demo mode return identical outputs on every run.
 
 ## 7. Model configuration
 

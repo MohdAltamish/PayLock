@@ -1,0 +1,11 @@
+PayPal sandbox MCP tool list
+
+Status: PENDING. Generated in Phase 1 Task 5 by scripts/mcp-list-tools.ts, which connects
+to https://mcp.sandbox.paypal.com/sse with the app's own client-credentials token
+(never the coding assistant's token) and writes the tools/list result here.
+
+Expected from the toolkit inventory (references/mcp-tools.md), not yet confirmed live:
+  orders/payments: create_order, pay_order          (never called at runtime: writes)
+  disputes:        list_disputes, get_dispute        (candidate for mcp_get_disputes)
+  reporting:       list_transactions                 (candidate for mcp_list_transactions)
+  invoices, subscriptions, catalog, shipment tools   (not used)

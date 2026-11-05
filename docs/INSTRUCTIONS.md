@@ -2,19 +2,30 @@
 
 ## Prerequisites
 - Node.js 20+, npm 10+
-- PostgreSQL 16 (local or Docker)
-- PayPal Developer account with a sandbox business app and two sandbox personal accounts
+- Docker (for local Postgres 16 and local-only `run_checks`)
+- PayPal Developer account with:
+  - a **US** sandbox business account (the platform: receives captures, sends payouts) with a sandbox REST app assigned to it
+  - on that app: **Payouts** and **Transaction Search** enabled (Apps & Credentials → app → Features)
+  - two US sandbox personal accounts (buyer, seller)
+  - payment review turned **off** on the business account (otherwise authorizations can stay `PENDING`)
 - An LLM API key (OpenAI-compatible or Anthropic)
-- ngrok or similar for local webhooks
+- A public HTTPS tunnel for local webhooks (we use ngrok)
 
 ## 0. Install the PayPal AI Toolkit (for your coding assistant)
 
-Pick your assistant:
+Clone it **next to** this repo, never inside it, and reference it from there:
 
 ```bash
-# Claude Code
-/plugin install paypal@claude-plugins-official
-/reload-plugins
+git clone https://github.com/paypal/AI-Toolkit.git ../AI-Toolkit
+```
+
+Then pick your assistant:
+
+```bash
+# Claude Code (marketplace)
+/plugin marketplace add paypal/AI-Toolkit
+/plugin install paypal@paypal-ai-toolkit
+# or local: claude --plugin-dir ../AI-Toolkit
 
 # OpenAI Codex
 codex plugin marketplace add paypal/AI-Toolkit
@@ -24,20 +35,21 @@ codex plugin add paypal@paypal-ai-toolkit
 cursor-agent plugin marketplace add https://github.com/paypal/AI-Toolkit
 ```
 
-IBM Bob: clone `https://github.com/paypal/AI-Toolkit` and open it in Bob. It authenticates to the MCP server through the browser (OAuth), so no token is needed.
+IBM Bob: open `../AI-Toolkit` in Bob. It authenticates to the MCP server through the browser (OAuth), so no token is needed.
 
 **Assistant token (separate from the app's credentials):**
-1. Generate a sandbox token with the client-credentials curl command from the toolkit README, using your sandbox client id and secret.
+1. Generate a sandbox token with the client-credentials curl command from `/paypal:setup`, using your sandbox client id and secret.
 2. Put it in your assistant's config (`~/.claude/settings.json` env block for Claude Code, `~/.codex/config.toml` for Codex, the plugin Configure panel for Cursor), not in `~/.zshrc`. Keep it on a single line.
 3. Fully quit and reopen the assistant, then run `/paypal:setup`.
-4. It expires in up to 8 hours. Run `/paypal:setup refresh` on a 401.
+4. It expires in up to 9 hours. Run `/paypal:setup refresh` on a 401.
 
-Never commit this token or paste it into issues or chat.
+Never commit this token or paste it into issues or chat. The app never uses it.
 
 ## 1. Clone and install
 ```bash
 git clone https://gitlab.com/gitlab-ai-hackathon/paylock.git
 cd paylock
+nvm use        # Node 20 from .nvmrc
 npm install
 ```
 
@@ -45,65 +57,76 @@ npm install
 Copy and fill:
 ```bash
 cp .env.example .env
+chmod 600 .env
 ```
 
+`.env.example` lists every variable with comments. The important ones:
+
 ```env
-# Database
 DATABASE_URL=postgresql://paylock:paylock@localhost:5432/paylock
 
-# PayPal (sandbox)
-PAYPAL_ENV=sandbox
-PAYPAL_CLIENT_ID=
+PAYPAL_ENV=sandbox                # sandbox only for the hackathon
+PAYPAL_CLIENT_ID=                 # sandbox app on the US business account
 PAYPAL_CLIENT_SECRET=
-PAYPAL_WEBHOOK_ID=
-PAYPAL_PLATFORM_EMAIL=            # sandbox business email receiving captures
+PAYPAL_WEBHOOK_ID=                # printed by scripts/webhook-register.ts
+PAYPAL_PLATFORM_EMAIL=            # sandbox business account email
+PAYPAL_SANDBOX_BUYER_EMAIL=       # sandbox personal account (buyer)
+PAYPAL_SANDBOX_SELLER_EMAIL=      # sandbox personal account (payout recipient)
 
-# LLM
-LLM_PROVIDER=openai               # openai | anthropic
+LLM_PROVIDER=openai               # openai | anthropic | replay
 LLM_API_KEY=
-LLM_MODEL=                        # e.g. a current tool-calling model
+LLM_MODEL=
 
-# App
 APP_URL=http://localhost:3000
 API_URL=http://localhost:4000
-SESSION_SECRET=change-me
+SESSION_SECRET=                   # 32+ random bytes, e.g. `openssl rand -hex 32`
 PAYLOCK_FREEZE=0
 ```
 
 ## 3. Database
 ```bash
 docker compose up -d postgres
-npx prisma migrate dev
-npm run seed            # creates demo users and personas
+npm run db:migrate
+npm run seed            # demo users and the 4 personas
 ```
 
 ## 4. PayPal sandbox setup (app)
-The app does **not** use the assistant token. It requests its own:
+The app does **not** use the assistant token. `apps/api/src/paypal/token.ts` requests its own with the client-credentials grant and caches it until 60 seconds before `expires_in`.
 
-```ts
-// apps/api/src/paypal/token.ts (sketch)
-// POST {base}/v1/oauth2/token, Basic auth(clientId:secret), grant_type=client_credentials
-// cache access_token; refresh when now > issuedAt + expires_in - 60s
+Use `/paypal:sandbox` and `/paypal:test-accounts` for accounts, test instruments and webhook testing guidance.
+
+### Webhooks (local)
+PayPal cannot deliver to `localhost`; the URL must be public HTTPS.
+
+```bash
+npm run dev:api                       # API on :4000
+ngrok http 4000                       # copy the https URL
+npm run webhook:register -- https://<id>.ngrok-free.app
 ```
 
-Use `/paypal:sandbox` and `/paypal:test-accounts` for accounts, test cards, and webhook testing guidance. Then follow steps 1 to 5 as already documented (app, two personal accounts, Payouts enabled, webhook events, webhook id).
+`webhook:register` lists the valid event names (`GET /v1/notifications/webhooks-event-types`), then creates the webhook, or PATCHes the existing one to the new URL if it already exists (a new ngrok URL means a PATCH, not a new webhook; an app can have at most 10). Put the printed id in `PAYPAL_WEBHOOK_ID` and restart the API.
+
+**Test with real events.** Run a smoke capture (`npm run smoke -- capture`) and watch the API log for a verified `PAYMENT.CAPTURE.COMPLETED`. Delivery takes roughly 10 to 75+ seconds. Events from the Dashboard Webhooks Simulator or `simulate-event` carry a fixed `webhook_id` and **never** pass signature verification; use them only to check that the listener is reachable. To re-test verification, resend a real event: `POST /v1/notifications/webhooks-events/{id}/resend`.
 
 ## Day 1 verification checklist (blocks all later work)
-- [ ] Toolkit installed; `/paypal:setup` passes
-- [ ] Ask the assistant: "List the PayPal MCP tools." Save the output to `docs/mcp-tools.txt`
-- [ ] Mark in SKILLS.md which of `mcp_get_disputes` and `mcp_list_transactions` exist; delete the rows that don't
-- [ ] Script: create order (AUTHORIZE), approve, authorize, capture
-- [ ] Script: void an authorization
-- [ ] Script: Payouts to the seller sandbox account
-- [ ] Record the authorization honor period and sandbox behavior in ARCHITECTURE.md (ADR-001)
+- [ ] Toolkit installed at `../AI-Toolkit`; `/paypal:setup` passes
+- [ ] Token has the Payouts and reporting scopes; `GET /v1/reporting/balances` returns 200
+- [ ] `npm run mcp:list-tools` writes `docs/mcp-tools.txt`
+- [ ] SKILLS.md `mcp_get_disputes` and `mcp_list_transactions` rows confirmed (renamed to real tool names) or deleted
+- [ ] `npm run smoke -- capture` (create AUTHORIZE order, approve as sandbox buyer, authorize, capture)
+- [ ] `npm run smoke -- void`
+- [ ] `npm run smoke -- partial` (one capture with `final_capture: true`; remainder released)
+- [ ] `npm run smoke -- payout` (balance pre-check, then Payouts to the seller sandbox account)
+- [ ] `npm run smoke -- idempotency`, `-- honor`, `-- card-authorize`, `-- decline`
+- [ ] Authorization `expiration_time` and honor-period behavior recorded in ARCHITECTURE.md ADR-001
 - [ ] Webhook received and signature verified from the raw body
-- [ ] Use `/paypal:explain-error <code>` on every failure and note the fix in `docs/pitfalls.md`
-- [ ] Confirm which JS SDK version the toolkit hook recommends (v5 or v6) for the buyer approval button
+- [ ] `/paypal:explain-error <code>` run on every failure and the fix noted in `docs/pitfalls.md`
+- [x] JS SDK version for the buyer approval button: **v6** (toolkit default for new projects)
 
 ## 5. Run locally
 ```bash
-npm run dev          # starts API on :4000 and web on :3000
-ngrok http 4000      # in another terminal; update PayPal webhook URL
+npm run dev          # API on :4000 and web on :3000
+ngrok http 4000      # in another terminal; then npm run webhook:register -- <url>
 ```
 Open http://localhost:3000?demo=1.
 
@@ -111,30 +134,39 @@ Open http://localhost:3000?demo=1.
 ```bash
 npm run lint
 npm run typecheck
-npm test             # unit tests: state machine, policy engine, payment math
-npm run eval         # agent fixtures (requires LLM key)
-npm run e2e          # Playwright: happy, scam, failure paths against local stack
+npm test             # unit tests: state machine, policy engine, payment math, adapter (mocked HTTP)
+npm run eval         # agent fixtures (requires LLM key, or LLM_PROVIDER=replay)
+npm run e2e          # Playwright: happy, scam, failure paths (sandbox card funding)
+npm run e2e:popup    # Playwright through the real sandbox buyer popup (may be flaky)
 ```
 
 ## 7. Demo walkthrough (local or hosted)
 1. Sign in as Buyer (demo login).
-2. Create deal with persona "Honest Seller". Confirm contract. Risk LOW. Lock funds with sandbox buyer login.
-3. Switch to Seller tab. Submit deliverable URL `https://example.com/demo-pass`. Watch Verifier pass and payout land.
-4. Create deal with persona "Fresh Account Scammer". Observe HIGH risk and block.
-5. Create deal with "Honest Seller", submit `fixtures/deliverables/bad.md`. Observe FAIL and void.
+2. Create deal with persona "Honest Seller". Confirm contract. Risk LOW. Reserve funds with the sandbox buyer login in the PayPal popup.
+3. Switch to Seller. Submit deliverable URL `<APP_URL>/demo/deliverables/pass`. Watch the Verifier pass and the payout land.
+4. Create deal with persona "Fresh Account Scammer". Observe HIGH risk and the block.
+5. Create deal with persona "Bad Deliverable" and submit `<APP_URL>/demo/deliverables/bad`. Observe FAIL and "funds returned".
+
+Between runs: `npm run demo:reset` (deletes demo deals and re-bases persona account ages so results repeat).
 
 ## 8. Deploy to Render
-1. Create Postgres instance; copy `DATABASE_URL`.
-2. Create Web Service from repo, root `apps/api`, build `npm ci && npx prisma migrate deploy && npm run build`, start `npm start`. Health check `/healthz`.
-3. Create Web Service for `apps/web` (Next.js), set `API_URL`.
-4. Set all env vars. Set PayPal webhook URL to the API host.
-5. Run `npm run seed` once via Render shell.
+`render.yaml` defines the services. All builds run from the **repo root** so npm workspaces resolve.
+
+1. API web service (Starter): build `npm ci && npm run build -w apps/api`, pre-deploy `npm run db:deploy -w apps/api`, start `npm run start -w apps/api`. Health check `/healthz`.
+2. Web web service (Next.js App Router needs a server, not a static site): build `npm ci && npm run build -w apps/web`, start `npm run start -w apps/web`. Set `API_URL` to the API's internal or public URL.
+3. Postgres: managed. Free Postgres expires 30 days after creation and judging may run weeks past Nov 13. Either upgrade to a paid plan before submission, or follow the re-create procedure below.
+4. Set all env vars (never `E2E_FUNDING`). Point the PayPal webhook at `https://<api>.onrender.com/webhooks/paypal` with `npm run webhook:register`.
+5. Seed once from the **API** service shell (free web services have no shell): `npm run seed -w apps/api`.
+
+Re-create and re-seed procedure (free Postgres): create a new Postgres instance, update `DATABASE_URL` on the API service, redeploy (migrations run in pre-deploy), run `npm run seed -w apps/api` from the API shell, then re-run the three demo paths.
 
 ## 9. Troubleshooting
-- **Webhook signature fails**: wrong `PAYPAL_WEBHOOK_ID` or body parsed before verification. Ensure raw body is used.
-- **Authorization expired**: sandbox honor period passed; create a new deal.
-- **Payout pending**: sandbox payouts can take a minute; UI shows "Confirming with PayPal".
-- **Agent schema errors**: check `LLM_MODEL` supports JSON mode / tool calling; see logs for raw output.
+- **Webhook signature fails**: wrong `PAYPAL_WEBHOOK_ID`, body parsed before verification, or a simulator event. Use the raw body and a real event.
+- **Balance check 403 `NOT_AUTHORIZED`**: enable Transaction Search on the app, then mint a new token.
+- **Authorization stays `PENDING`**: payment review is on for the sandbox business account; turn it off.
+- **Authorization expired**: the reservation passed its `expiration_time`; the deal shows "reservation expired". Create a new deal.
+- **Payout pending**: sandbox payouts can take a minute; the UI shows "Confirming with PayPal…".
+- **Agent schema errors**: check `LLM_MODEL` supports JSON schema output; see logs for the validation error.
 
 ## 10. Repository layout
 ```
@@ -145,7 +177,6 @@ packages/
   schemas/    Zod schemas shared by API and web
   skills/     Tool implementations
 fixtures/     Eval cases, personas, sample deliverables
-scripts/      seed, void-all, paypal smoke tests
+scripts/      seed, demo-reset, void-all, paypal smoke tests, webhook-register, mcp-list-tools
 docs/         This documentation
 ```
-

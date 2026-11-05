@@ -48,7 +48,7 @@
 - Risk banner (see below).
 - Summary card: amount, seller, criteria count.
 - Primary CTA depends on risk: LOW "Lock funds with PayPal"; MEDIUM "Review and approve"; HIGH "Do not fund" (primary, cancels) with secondary "Override anyway" requiring reason.
-- PayPal Buttons (JS SDK) render only after approval.
+- The PayPal button renders only after approval (or for LOW risk), using **JS SDK v6**: load `https://www.sandbox.paypal.com/web-sdk/v6/core` with `async`, `createInstance({ clientId, components: ["paypal-payments"] })` with the `clientId` from `/api/config/paypal`, check `findEligibleMethods()`, render a `<paypal-button>` web component, and on click call `session.start({ presentationMode: "auto" }, fundDeal())` with the invoked Promise. `onApprove` sends `data.orderId` to `/api/deals/:id/authorize` (the server ignores it and uses the stored order). `onCancel` and `onError` show toasts. Never load v5 (`sdk/js`) on the same page.
 
 ### Risk banner (component)
 - Left: shield icon colored by level. Title: "Risk: Low / Medium / High".
@@ -78,7 +78,10 @@
 - Deal list empty: illustration plus "Create your first deal".
 - Agent working: skeleton plus "Paylock AI is reviewing..." with elapsed time.
 - PayPal popup closed: toast "Approval not completed. Funds were not reserved."
-- Webhook delayed: badge shows "Confirming with PayPal..." with spinner; never show success before webhook.
+- Money states follow PayPal's synchronous response (ADR-009): "Funds reserved" after a successful authorization, "Funds returned" after a void. A payout shows "Confirming with PayPal..." with a spinner until the payout batch or webhook confirms; never show "released" before that. Webhook confirmations appear later on the timeline as "PayPal confirmed".
+- Authorization declined: "PayPal declined the payment method. Funds were not reserved." plus PayPal's reason.
+- Reservation expired: badge "Returned"; timeline item "Reservation expired".
+- Settlement error: red alert card "PayPal could not complete this step" with the failed step, PayPal's error name, and a "Retry" button (buyer).
 
 ## Copy guidelines
 - Say "risk signals", never "scammer".
@@ -90,7 +93,7 @@
 - Color never the only indicator: badges include text and icon.
 - Contrast >= 4.5:1 for text.
 - Timeline updates announced via aria-live region.
-- PayPal Buttons container labelled.
+- PayPal button container labelled ("Reserve funds with PayPal").
 
 ## Demo mode
 `?demo=1` enables persona picker (Honest Seller, Fresh Account Scammer, Off-Platform Pusher, Bad Deliverable) and speeds up agent steps with cached fixtures if LLM latency exceeds 10s.

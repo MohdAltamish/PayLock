@@ -34,8 +34,9 @@ Solo? Follow the same order; roles become phases.
 - [ ] Script: create order (AUTHORIZE), approve via sandbox UI, authorize, capture
 - [ ] Script: void authorization
 - [ ] Script: payouts batch to seller sandbox email
-- [ ] Register webhook (CHECKOUT.ORDER.APPROVED, PAYMENT.AUTHORIZATION.CREATED, PAYMENT.CAPTURE.COMPLETED, PAYMENT.AUTHORIZATION.VOIDED, PAYMENT.PAYOUTSBATCH.SUCCESS, PAYMENT.PAYOUTS-ITEM.SUCCEEDED, CUSTOMER.DISPUTE.CREATED)
-- [ ] Verify webhook signature using PayPal verify-webhook-signature endpoint
+- [ ] Register webhook, names checked against `GET /v1/notifications/webhooks-event-types`: CHECKOUT.ORDER.APPROVED, PAYMENT.AUTHORIZATION.CREATED, PAYMENT.AUTHORIZATION.VOIDED, PAYMENT.CAPTURE.COMPLETED, PAYMENT.CAPTURE.PENDING, PAYMENT.CAPTURE.DENIED, PAYMENT.CAPTURE.REFUNDED, PAYMENT.PAYOUTSBATCH.SUCCESS, PAYMENT.PAYOUTSBATCH.DENIED, PAYMENT.PAYOUTS-ITEM.SUCCEEDED, PAYMENT.PAYOUTS-ITEM.FAILED, PAYMENT.PAYOUTS-ITEM.UNCLAIMED, PAYMENT.PAYOUTS-ITEM.BLOCKED, PAYMENT.PAYOUTS-ITEM.RETURNED, CUSTOMER.DISPUTE.CREATED
+- [ ] Verify webhook signature using PayPal verify-webhook-signature endpoint, from the raw body, with a real (not simulated) event
+- [ ] Balance pre-check (`GET /v1/reporting/balances`) passes before the payout script
 
 ### Day 2: Deal core
 - [ ] Prisma schema (see DESIGN.md)
@@ -59,7 +60,8 @@ Solo? Follow the same order; roles become phases.
 ### Day 5: Deployed
 - [ ] Render web service plus Postgres
 - [ ] Env vars, health check, webhook URL updated
-- [ ] Seed script with 3 personas: Honest Seller, Fresh Account Scammer, Off-Platform Pusher
+- [ ] Seed script with 4 personas: Honest Seller, Fresh Account Scammer, Off-Platform Pusher, Bad Deliverable
+- [ ] Postgres plan for the judging period: paid before submission, or the re-create and re-seed procedure documented (free Postgres expires after 30 days)
 
 ### Day 6: Hardening
 - [ ] Retry/backoff on PayPal 5xx and 429
@@ -73,11 +75,18 @@ Solo? Follow the same order; roles become phases.
 - [ ] Upload to YouTube (public, no copyrighted music)
 - [ ] Devpost: description, tools used, repo link, demo URL, video link
 
-## Cut list (if behind schedule, cut in this order)
+## Cut list (if a phase overruns its time budget by 25%, cut in this order)
+Budgets per phase are in BUILD_PLAN.md section 2.5; time is logged in `docs/progress.md`.
 1. F15 dispute export
-2. F13 agent-to-agent API mode (keep as scripted demo)
-3. F12 community reports (keep static trust data)
-4. Partial payments (binary pass/fail only)
+2. E2E popup run
+3. MCP enrichment
+4. Verifier tool loop
+5. `refundCapture` (runbook falls back to manual payout retry)
+6. F13 agent-to-agent API mode (keep as scripted demo)
+7. `inspect_repo`
+8. F12 community reports (keep static trust data)
+9. Playwright reduced to the happy path
+10. Partial payments (binary pass/fail only)
 
 Never cut: authorize/capture/void, Guardian gating, Verifier, timeline, README, video.
 

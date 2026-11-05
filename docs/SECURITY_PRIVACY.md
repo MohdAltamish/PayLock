@@ -19,12 +19,15 @@
 ## 2. Controls
 
 ### Authentication and authorization
-- Session auth (NextAuth) for humans; API keys with scopes for agents (`deals:write`, `deliverables:write`).
+- Demo sessions for humans: a signed, httpOnly, `SameSite=Lax` cookie issued by `/auth/demo-login` (no NextAuth). API keys with scopes for agents (`deals:write`, `deliverables:write`), stored as sha256 hashes.
+- Origin check on state-changing requests (CSRF), since the web app proxies `/api/*` first-party.
 - Row-level checks: buyer-only actions (approve, override), seller-only actions (deliver).
 
 ### Payment safety
-- `intent=AUTHORIZE`; capture only after Decision stored in same transaction.
-- `final_capture=true` ensures remainder is released on partial.
+- `intent=AUTHORIZE`; capture, payout and refund only with a persisted Decision and a `PolicyDecision` written in the same transaction as the pending payment record (ADR-011). The adapter re-checks the `PolicyDecision` before calling PayPal.
+- `final_capture=true` (always sent explicitly) ensures the remainder is released on partial; no void after a final capture.
+- `/authorize` never trusts a client-supplied order id: it uses the stored `paypalOrderId` and verifies amount, currency and `custom_id` via `GET` before LOCKED.
+- The E2E card-funding route exists only when `PAYPAL_ENV=sandbox`, `E2E_FUNDING=card` and `NODE_ENV != production`; a test asserts a 404 under production config.
 - Payout recipient is the seller's PayPal email recorded at contract time; changes after LOCKED trigger PAYOUT_EMAIL_CHANGED signal and require buyer confirmation.
 - Spend policy enforced in Policy Engine; UI cannot bypass.
 
@@ -35,13 +38,16 @@
 - Temperature 0 for Guardian and Verifier.
 
 ### Webhooks
-- Verify via PayPal `/v1/notifications/verify-webhook-signature`.
+- Verify via PayPal `/v1/notifications/verify-webhook-signature` using the raw request bytes (never re-serialized JSON).
+- On a failed signature: return 400, log it (transmission id, no body), never store or process.
 - Store `event_id`; ignore duplicates.
 - Process asynchronously; respond 200 within 2s.
+- Webhooks only append events and wake the reconciler; they never regress state or trigger money writes.
 
 ### Infrastructure
 - TLS everywhere (Render managed).
-- Secrets in Render env vars; never committed. `.env.example` only.
+- Secrets in Render env vars; never committed. `.env.example` only. Secret detection (gitleaks) in CI.
+- The browser receives only the PayPal `clientId`, at runtime from `GET /config/paypal`; no PayPal env var is in the frontend bundle.
 - Dependency scanning in CI (GitLab SAST and Dependency Scanning templates).
 - Rate limiting on public endpoints (100 req/min/IP).
 
@@ -70,6 +76,11 @@
 - Overrides always available to the human buyer.
 
 ## 4. Incident response (hackathon scale)
-- Kill switch env var `PAYLOCK_FREEZE=1` blocks all write skills.
-- Runbook: rotate PayPal secret, revoke agent keys, void open authorizations via script `scripts/void-all.ts`.
+- Kill switch env var `PAYLOCK_FREEZE=1` blocks every money write (create order, authorize, capture, payout, refund). Void stays allowed, because void returns funds to the buyer.
+- Runbook, compromise: rotate the PayPal secret, revoke agent keys, set `PAYLOCK_FREEZE=1`, void open authorizations via `scripts/void-all.ts`.
+- Runbook, payout failed after capture (deal in SETTLEMENT_ERROR with a completed capture):
+  1. Read the payout item's `errors.name` (`GET /v1/payments/payouts/{batch_id}`) and run `/paypal:explain-error` on it. Log it in `docs/pitfalls.md`.
+  2. If the cause is fixable (recipient email, sender balance, Payouts not enabled), fix it and use the timeline's retry. The retry re-sends with a new `sender_batch_id` and the same `sender_item_id = dealId`, and only if the previous item ended `FAILED`, `RETURNED`, `BLOCKED`, `REFUNDED` or `REVERSED`.
+  3. If the item is `PENDING`, `UNCLAIMED` or `ONHOLD`, do not re-send; wait for the sweeper or webhook.
+  4. If the seller cannot be paid, refund the buyer (P2): `refundCapture` for the captured amount, gated by a `PolicyDecision(action=refund)`; the deal goes to VOIDED with `REFUNDED`. If refund is not built (cut list), refund manually in the sandbox dashboard and record it on the timeline as a HUMAN action.
 

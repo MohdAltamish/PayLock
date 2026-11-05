@@ -68,7 +68,7 @@ Every payment for work should be conditional on proof, and every counterparty sh
 | F3 | Risk level gates funding: High blocks autonomous funding, Medium requires explicit human approval, Low proceeds | P0 |
 | F4 | Create PayPal order with `intent: AUTHORIZE`; buyer approves; authorization stored | P0 |
 | F5 | Seller submits deliverable; Verifier scores each criterion, outputs pass / partial / fail with reasoning | P0 |
-| F6 | On pass: capture authorization, create payout to seller. On fail: void authorization. On partial: capture proportional amount, void remainder | P0 |
+| F6 | On pass: capture authorization, create payout to seller. On fail: void authorization. On partial: one capture of the proportional amount with `final_capture=true` (PayPal releases the remainder; no void), then payout | P0 |
 | F7 | Receive and verify PayPal webhooks; update deal state idempotently | P0 |
 | F8 | Deal timeline UI showing states, agent decisions, payment events | P0 |
 | F9 | Spend policy per buyer: max per deal, daily cap, approval threshold | P0 |
@@ -108,5 +108,6 @@ Every payment for work should be conditional on proof, and every counterparty sh
 ## 11. Open questions
 
 - Should partial payment thresholds be fixed (e.g., 70%) or negotiated per contract? Default: per contract, fallback 70%.
+- Currency: USD only for the hackathon demo; other currencies are a non-goal.
 - Do we show the seller their own risk score? Default: no, show only "verification steps to improve trust".
 
