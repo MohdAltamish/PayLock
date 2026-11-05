@@ -1,9 +1,13 @@
+import { createAgents } from "./agents/index.js";
 import { buildApp } from "./app.js";
 import { ConfigError, loadConfig } from "./config/env.js";
+import { DealEventBus } from "./deals/bus.js";
+import { DealExecutor } from "./deals/executor.js";
 import { closeDb, getDb, pingDb } from "./lib/db.js";
+import { PayPalAdapter } from "./paypal/adapter.js";
 import { PayPalHttp } from "./paypal/http.js";
 import { TokenProvider } from "./paypal/token.js";
-import { WebhookProcessor } from "./webhooks/processor.js";
+import { buildServices } from "./services.js";
 import { PrismaWebhookStore } from "./webhooks/store.js";
 import { PayPalWebhookVerifier } from "./webhooks/verify.js";
 
@@ -26,7 +30,7 @@ async function main() {
     clientSecret: config.paypal.clientSecret,
   });
 
-  // PayPal client and webhook processor log through the app logger once it exists.
+  // PayPal client and services log through the app logger once it exists.
   const store = new PrismaWebhookStore(db);
   const lazyLog = {
     info: (o: object, m: string) => app.log.info(o, m),
@@ -35,6 +39,12 @@ async function main() {
     debug: (o: object, m: string) => app.log.debug(o, m),
   };
   const http = new PayPalHttp({ baseUrl: config.paypal.baseUrl, tokens, log: lazyLog });
+  const frozen = config.freeze;
+  const paypal = new PayPalAdapter(http, { isFrozen: () => frozen });
+  const bus = new DealEventBus();
+  const exec = new DealExecutor(db, bus);
+  const agents = await createAgents(config, lazyLog);
+  const services = buildServices({ config, db, exec, bus, paypal, agents, store, log: lazyLog });
 
   const app = await buildApp({
     config,
@@ -51,15 +61,20 @@ async function main() {
           ? new PayPalWebhookVerifier(http, config.paypal.webhookId)
           : undefined,
         store,
-        processor: new WebhookProcessor(store, lazyLog),
+        processor: services.processor,
       },
+      services,
     },
   });
+
   if (!config.paypal.webhookId)
     app.log.warn("PAYPAL_WEBHOOK_ID is not set; /webhooks/paypal will return 503");
+  if (config.freeze) app.log.warn("PAYLOCK_FREEZE is on: only voids are allowed");
+  app.log.info({ agents: config.agentsMode, e2e_card_funding: config.e2eCardFunding }, "starting");
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "shutting down");
+    services.sweeper.stop();
     await app.close();
     await closeDb();
     process.exit(0);
@@ -68,6 +83,7 @@ async function main() {
   process.on("SIGINT", () => void shutdown("SIGINT"));
 
   await app.listen({ host: "0.0.0.0", port: config.port });
+  services.sweeper.start(config.sweeperIntervalMs);
 }
 
 void main();

@@ -58,6 +58,20 @@ export function registerProblemHandlers(app: FastifyInstance) {
         problemBody(req, err.status, err.code, err.title, err.detail, err.extensions),
       );
     }
+    // Invalid deal transitions (deals/state-machine.ts) become 409 problems naming the state.
+    if (err.name === "TransitionError") {
+      const t = err as unknown as { from: string; event: string; reason: string };
+      return send(
+        reply,
+        problemBody(req, 409, "invalid-transition", "That action is not allowed now", t.reason, {
+          state: t.from,
+          event: t.event,
+        }),
+      );
+    }
+    if (err.name === "DealNotFoundError") {
+      return send(reply, problemBody(req, 404, "not-found", "Deal not found"));
+    }
     if (err.validation) {
       return send(
         reply,
