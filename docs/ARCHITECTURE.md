@@ -75,7 +75,9 @@ Documented lifecycle (RulesHub authorize-order mapping): a 3-day honor period (g
 
 **Sandbox observation (2026-11-05, C5):** three sandbox authorizations (card-funded, US business account) all had `expiration_time` exactly 29 days (696 hours) after `create_time`, e.g. created `2026-11-05T13:00:29Z`, expires `2026-12-04T13:00:29Z`. The 3-day honor period is a funds guarantee that the API does not expose, so it cannot be observed directly. Decision: `AUTH_SAFE_WINDOW_HOURS = 72`. Contract deadlines are capped to 72 hours after authorization so capture happens inside the honor period; the stored `expiration_time` drives the "reservation expired" path. Reauthorization is out of scope.
 
-**Partial capture (C6): PENDING.** Needs a buyer-approved order; record whether `final_capture: true` on a 70.00 capture of a 100.00 authorization releases the remaining 30.00.
+**Partial capture (C6, 2026-11-05):** buyer-approved 100.00 authorization (`2S593351MY931625E`), one capture of 70.00 with `final_capture: true` (`1TK33286D72438808`). Afterwards the authorization status is `CAPTURED` (not `PARTIALLY_CAPTURED`), and a second capture is rejected with `422 AUTHORIZATION_ALREADY_CAPTURED`. So the final capture closes the authorization, the 30.00 remainder can no longer be captured, and no void is needed. Whether the buyer's 30.00 hold shows as released is visible only in the buyer's sandbox account activity (owner check).
+
+**Buyer-approved orders (C12):** the create-order response links the buyer to `rel: payer-action` (not `approve`), with order status `PAYER_ACTION_REQUIRED`; after approval the status is `APPROVED`. The adapter accepts either link name.
 
 ### ADR-002: Modular monolith
 One service, clear module boundaries. Faster to build, deploy, and demo. Agents can be extracted later.

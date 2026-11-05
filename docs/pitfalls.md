@@ -102,3 +102,21 @@ Platform payee confirmed: every smoke order's `purchase_units[0].payee.email_add
 
 - **What:** the `capture`, `void` and `partial` flows waited in-process for the buyer to approve; when the background processes were killed, the waiting orders were orphaned (no money moved; they stay `PAYER_ACTION_REQUIRED` and expire).
 - **Fix:** two-step flows. `npm run smoke -- <flow>` creates the order and prints the approve link; after approval, `npm run smoke -- <flow> --order <id>` checks that the order is a smoke order with the expected amount and USD, then continues.
+
+## 2026-11-05: Buyer-approved flows (capture, void, partial)
+
+- **capture:** order `92J50534E99722541` 10.00, payer `account_status: VERIFIED`, authorization `6YX20455UM867063S` CREATED, capture `9VU03839RD0862323` with `final_capture: true`. Fee 0.84, net 9.16.
+- **void:** authorization `6L560595JM8649442` → VOIDED.
+- **partial (C6):** see ADR-001. One 70.00 final capture of a 100.00 authorization; authorization becomes `CAPTURED`; a second capture gets `422 AUTHORIZATION_ALREADY_CAPTURED` (correctly not retried).
+
+## 2026-11-05: Every capture since ~13:20 UTC is `PENDING` / `PENDING_REVIEW`
+
+- **What:** captures at 13:00 completed immediately. Every capture from 13:20 on (card and PayPal wallet: `3CK27531MS866704A`, `9VU03839RD0862323`, `1TK33286D72438808`) is `PENDING` with `status_details.reason: PENDING_REVIEW`, still pending 2+ minutes later. Webhooks deliver `PAYMENT.CAPTURE.PENDING`, never `.COMPLETED`.
+- **Explain-error:** not an error (HTTP 201). `PENDING_REVIEW` means PayPal holds the capture for review. In sandbox this usually comes from the receiving business account's payment review setting or sandbox risk rules on repeated small captures, not from our request.
+- **Impact:** high for the demo. Settlement waits for COMPLETED before paying out, so a pending capture would leave the deal at "Confirming with PayPal".
+- **Next:** owner checks the US business account (`admin@paylock.example.com`) for a payment review toggle; re-test with one capture. If it persists, ask PayPal developer support with the debug ids. Settlement keeps the safe rule regardless: no payout until the capture is COMPLETED.
+
+## 2026-11-05: Webhook ordering and repeats
+
+- **Out of order:** for authorization `6L560595JM8649442`, `PAYMENT.AUTHORIZATION.VOIDED` arrived at 13:45:15 and `PAYMENT.AUTHORIZATION.CREATED` at 13:45:27. Webhook order cannot be trusted; this confirms ADR-009 (the reconciler reads current state with GET and only moves forward).
+- **Repeats with different ids:** `CHECKOUT.ORDER.APPROVED` for order `92J50534E99722541` arrived three times with three distinct event ids (likely one per approval-page submit). Dedup by event id alone does not make processing idempotent; handlers must be idempotent on the resource and the deal state too.

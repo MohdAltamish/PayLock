@@ -104,18 +104,18 @@ ngrok http 4000                       # copy the https URL
 npm run webhook:register -- https://<id>.ngrok-free.app
 ```
 
-`webhook:register` lists the valid event names (`GET /v1/notifications/webhooks-event-types`), then creates the webhook, or PATCHes the existing one to the new URL if it already exists (a new ngrok URL means a PATCH, not a new webhook; an app can have at most 10). Put the printed id in `PAYPAL_WEBHOOK_ID` and restart the API.
+`webhook:register` lists the valid event names (`GET /v1/notifications/webhooks-event-types`), then creates the webhook, or PATCHes the existing one to the new URL if it already exists (a new ngrok URL means a PATCH, not a new webhook; an app can have at most 10). Put the printed id in `PAYPAL_WEBHOOK_ID` (or pass `--write-env`) and restart the API.
 
-**Test with real events.** Run a smoke capture (`npm run smoke -- capture`) and watch the API log for a verified `PAYMENT.CAPTURE.COMPLETED`. Delivery takes roughly 10 to 75+ seconds. Events from the Dashboard Webhooks Simulator or `simulate-event` carry a fixed `webhook_id` and **never** pass signature verification; use them only to check that the listener is reachable. To re-test verification, resend a real event: `POST /v1/notifications/webhooks-events/{id}/resend`.
+**Test with real events.** Run `npm run smoke -- card-capture` (no buyer login needed) and watch the API log for verified `PAYMENT.AUTHORIZATION.CREATED` and `PAYMENT.CAPTURE.*` events. Delivery takes roughly 10 to 75+ seconds. Events from the Dashboard Webhooks Simulator or `simulate-event` carry a fixed `webhook_id` and **never** pass signature verification; use them only to check that the listener is reachable. To re-test verification, resend a real event: `POST /v1/notifications/webhooks-events/{id}/resend`.
 
 ## Day 1 verification checklist (blocks all later work)
 - [ ] Toolkit installed at `../AI-Toolkit`; `/paypal:setup` passes
 - [ ] Token has the Payouts and reporting scopes; `GET /v1/reporting/balances` returns 200
 - [ ] `npm run mcp:list-tools` writes `docs/mcp-tools.txt`
 - [ ] SKILLS.md `mcp_get_disputes` and `mcp_list_transactions` rows confirmed (renamed to real tool names) or deleted
-- [ ] `npm run smoke -- capture` (create AUTHORIZE order, approve as sandbox buyer, authorize, capture)
-- [ ] `npm run smoke -- void`
-- [ ] `npm run smoke -- partial` (one capture with `final_capture: true`; remainder released)
+- [ ] `npm run smoke -- capture`, then approve as the sandbox buyer, then `npm run smoke -- capture --order <id>` (authorize, capture)
+- [ ] `npm run smoke -- void` (same two steps)
+- [ ] `npm run smoke -- partial` (same two steps; one capture with `final_capture: true` closes the authorization)
 - [ ] `npm run smoke -- payout` (balance pre-check, then Payouts to the seller sandbox account)
 - [ ] `npm run smoke -- idempotency`, `-- honor`, `-- card-authorize`, `-- decline`
 - [ ] Authorization `expiration_time` and honor-period behavior recorded in ARCHITECTURE.md ADR-001
