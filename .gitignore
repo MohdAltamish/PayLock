@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# PayPal AI Toolkit is a dev-time plugin; reference it, never commit it
+AI-Toolkit/
+
+# Test artifacts
+playwright-report/
+test-results/
+.replay-tmp/
+
+# OS / editor
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea/
