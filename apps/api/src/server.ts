@@ -1,6 +1,7 @@
 import { buildApp } from "./app.js";
 import { ConfigError, loadConfig } from "./config/env.js";
 import { closeDb, getDb, pingDb } from "./lib/db.js";
+import { TokenProvider } from "./paypal/token.js";
 
 async function main() {
   let config;
@@ -15,11 +16,20 @@ async function main() {
   }
 
   const db = getDb(config.databaseUrl);
+  const tokens = new TokenProvider({
+    baseUrl: config.paypal.baseUrl,
+    clientId: config.paypal.clientId,
+    clientSecret: config.paypal.clientSecret,
+  });
   const app = await buildApp({
     config,
     deps: {
       healthChecks: {
         db: () => pingDb(db),
+        // Served from cache after the first call; only re-fetches near expiry.
+        paypal: async () => {
+          await tokens.getToken();
+        },
       },
     },
   });
