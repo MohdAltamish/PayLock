@@ -110,8 +110,10 @@ export class PayPalSim {
       throw new PayPalError(0, "NETWORK_ERROR", "socket hang up", undefined, [], 4);
     if (fault && typeof fault.kind === "object")
       throw parsePayPalError(fault.kind.status, fault.kind.body, "dbg-sim");
-    if (r.method === "POST" && r.requestId) {
-      const prev = this.replay.get(r.requestId);
+    // C8: Payouts ignore PayPal-Request-Id for dedup; a reused sender_batch_id is a 400.
+    const replayable = r.method === "POST" && !!r.requestId && r.path !== "/v1/payments/payouts";
+    if (replayable) {
+      const prev = this.replay.get(r.requestId!);
       if (prev) {
         if (fault?.kind === "lost-response")
           throw new PayPalError(0, "NETWORK_ERROR", "timeout", undefined, [], 4);
@@ -119,7 +121,7 @@ export class PayPalSim {
       }
     }
     const res = this.handle(r);
-    if (r.method === "POST" && r.requestId && res.status < 400) this.replay.set(r.requestId, res);
+    if (replayable && res.status < 400) this.replay.set(r.requestId!, res);
     if (fault?.kind === "lost-response")
       throw new PayPalError(0, "NETWORK_ERROR", "timeout", undefined, [], 4);
     return res;

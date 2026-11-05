@@ -218,7 +218,9 @@ export class Settlement {
       if (!cap || cap.status === "FAILED") {
         if (!allowWrites) return;
         const rec = await this.startCapture(dealId);
-        if (rec) await this.sendCapture(deal, rec);
+        if (!rec) return;
+        await this.sendCapture(deal, rec);
+        if (await this.stillUnknown(rec.id)) return; // the sweeper resumes it with the same key
         continue;
       }
       if (cap.status === "PENDING") {
@@ -230,8 +232,7 @@ export class Settlement {
         }
         if (!allowWrites) return;
         await this.sendCapture(deal, cap); // resume with the same key
-        const after = await this.d.db.paymentRecord.findUniqueOrThrow({ where: { id: cap.id } });
-        if (after.status === "PENDING" && !after.paypalId) return; // still unknown
+        if (await this.stillUnknown(cap.id)) return;
         continue;
       }
       // Capture SUCCEEDED (GET-confirmed COMPLETED): payout step.
@@ -239,7 +240,9 @@ export class Settlement {
       if (!pay || pay.status === "FAILED") {
         if (!allowWrites) return;
         const rec = await this.startPayout(dealId, cap);
-        if (rec) await this.sendPayout(deal, rec);
+        if (!rec) return;
+        await this.sendPayout(deal, rec);
+        if (await this.stillUnknown(rec.id)) return;
         continue;
       }
       if (pay.status === "PENDING") {
@@ -251,12 +254,17 @@ export class Settlement {
         }
         if (!allowWrites || rawField(pay, "duplicateBatch")) return; // wait for the PAYOUTS-ITEM webhook
         await this.sendPayout(deal, pay);
-        const after = await this.d.db.paymentRecord.findUniqueOrThrow({ where: { id: pay.id } });
-        if (after.status === "PENDING" && !after.paypalId) return;
+        if (await this.stillUnknown(pay.id)) return;
         continue;
       }
       return; // payout SUCCEEDED: applyPayoutBatch already released the deal
     }
+  }
+
+  /** PENDING with no PayPal id: the outcome of the last write is unknown (or it was a duplicate batch). */
+  private async stillUnknown(recId: string): Promise<boolean> {
+    const r = await this.d.db.paymentRecord.findUniqueOrThrow({ where: { id: recId } });
+    return r.status === "PENDING" && !r.paypalId;
   }
 
   private async startCapture(dealId: string): Promise<PaymentRecord | null> {
