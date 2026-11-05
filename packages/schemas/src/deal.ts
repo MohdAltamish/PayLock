@@ -21,7 +21,12 @@ export const DEAL_STATES = [
 export const DealState = z.enum(DEAL_STATES);
 export type DealState = z.infer<typeof DealState>;
 
-export const TERMINAL_STATES: readonly DealState[] = ["RELEASED", "RELEASED_PARTIAL", "VOIDED", "CANCELLED"];
+export const TERMINAL_STATES: readonly DealState[] = [
+  "RELEASED",
+  "RELEASED_PARTIAL",
+  "VOIDED",
+  "CANCELLED",
+];
 
 export const RiskLevel = z.enum(["LOW", "MEDIUM", "HIGH"]);
 export type RiskLevel = z.infer<typeof RiskLevel>;
@@ -41,7 +46,8 @@ export const BlockReason = z.enum([
 export type BlockReason = z.infer<typeof BlockReason>;
 
 /** The money state shown in the UI (UI_UX.md copy: reserved / released / returned). */
-export type MoneyState = "none" | "reserving" | "reserved" | "releasing" | "released" | "returned" | "attention";
+export type MoneyState =
+  "none" | "reserving" | "reserved" | "releasing" | "released" | "returned" | "attention";
 
 export function moneyState(state: DealState): MoneyState {
   switch (state) {

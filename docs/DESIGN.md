@@ -300,7 +300,7 @@ FUNDING -> LOCKED                : paypal.authorization.created and verified (st
 FUNDING -> CANCELLED             : authorization declined (reason shown) | ORDER_MISMATCH | POLICY_CAP at authorize | funding timeout | buyer.cancel
 LOCKED -> DELIVERED              : seller.deliverable.submitted
 LOCKED -> VOIDED                 : deadline passed, no delivery -> paypal.void
-LOCKED -> VOIDED                 : authorization expired (blockReason AUTH_EXPIRED; timeline "reservation expired")
+LOCKED | DELIVERED -> VOIDED     : authorization expired (blockReason AUTH_EXPIRED; timeline "reservation expired"); also from VERIFYING and NEEDS_REVIEW
 DELIVERED -> VERIFYING           : verifier.started
 VERIFYING -> RELEASING           : decision PASS | PARTIAL (>= partialPayMin), and requiresHumanRelease = false
 VERIFYING -> NEEDS_REVIEW        : schema failure | low confidence | human criterion | requiresHumanRelease = true
@@ -310,7 +310,8 @@ NEEDS_REVIEW -> VOIDED           : human.reject -> paypal.void succeeded
 RELEASING -> RELEASED            : capture COMPLETED + payout item SUCCESS (full)
 RELEASING -> RELEASED_PARTIAL    : capture COMPLETED + payout item SUCCESS (partial)
 RELEASING -> SETTLEMENT_ERROR    : capture or payout failed after retries
-VERIFYING | NEEDS_REVIEW | LOCKED -> SETTLEMENT_ERROR : void failed after retries
+VERIFYING | NEEDS_REVIEW | LOCKED | DELIVERED -> SETTLEMENT_ERROR : void failed after retries
+SETTLEMENT_ERROR (stays)         : refund failed, void retry failed, or human.retry(void) in progress
 SETTLEMENT_ERROR -> RELEASING    : human.retry (resumes the failed step: capture or payout)
 SETTLEMENT_ERROR -> VOIDED       : human.retry of a failed void succeeded | refund COMPLETED (blockReason REFUNDED, P2)
 ```

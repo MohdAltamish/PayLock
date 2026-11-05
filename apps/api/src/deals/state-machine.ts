@@ -8,14 +8,25 @@ import type { BlockReason, DealState, RiskLevel } from "@paylock/schemas";
 
 export type DealEvent =
   | { type: "contract.created" }
-  | { type: "risk.assessed"; level: RiskLevel; policy: "allow" | "require_approval" | "block"; policyCap?: boolean }
+  | {
+      type: "risk.assessed";
+      level: RiskLevel;
+      policy: "allow" | "require_approval" | "block";
+      policyCap?: boolean;
+    }
   | { type: "buyer.override"; reason: string }
   | { type: "buyer.approve" }
   | { type: "buyer.reject" }
   | { type: "buyer.cancel" }
   | { type: "paypal.order.created"; policyAllowed: boolean }
   | { type: "paypal.authorization.created"; verified: boolean }
-  | { type: "funding.failed"; reason: Extract<BlockReason, "AUTH_DECLINED" | "ORDER_MISMATCH" | "POLICY_CAP" | "FUNDING_TIMEOUT"> }
+  | {
+      type: "funding.failed";
+      reason: Extract<
+        BlockReason,
+        "AUTH_DECLINED" | "ORDER_MISMATCH" | "POLICY_CAP" | "FUNDING_TIMEOUT"
+      >;
+    }
   | { type: "seller.deliverable.submitted" }
   | { type: "verifier.started" }
   | {
@@ -26,7 +37,13 @@ export type DealEvent =
       needsHumanReview: boolean;
     }
   | { type: "verifier.invalid" }
-  | { type: "settlement.voided"; reason: Extract<BlockReason, "VERIFICATION_FAILED" | "HUMAN_REJECTED" | "DEADLINE_PASSED" | "AUTH_EXPIRED" | "REFUNDED"> }
+  | {
+      type: "settlement.voided";
+      reason: Extract<
+        BlockReason,
+        "VERIFICATION_FAILED" | "HUMAN_REJECTED" | "DEADLINE_PASSED" | "AUTH_EXPIRED" | "REFUNDED"
+      >;
+    }
   | { type: "authorization.expired" }
   | { type: "human.approve" }
   | { type: "human.reject" }
@@ -62,9 +79,22 @@ export class TransitionError extends Error {
   }
 }
 
-const CANCELLABLE: readonly DealState[] = ["DRAFT", "CONTRACTED", "GUARDED", "FLAGGED", "AWAITING_APPROVAL", "FUNDING"];
+const CANCELLABLE: readonly DealState[] = [
+  "DRAFT",
+  "CONTRACTED",
+  "GUARDED",
+  "FLAGGED",
+  "AWAITING_APPROVAL",
+  "FUNDING",
+];
 /** States holding an authorization that a void can release. */
-const VOIDABLE: readonly DealState[] = ["LOCKED", "DELIVERED", "VERIFYING", "NEEDS_REVIEW", "SETTLEMENT_ERROR"];
+const VOIDABLE: readonly DealState[] = [
+  "LOCKED",
+  "DELIVERED",
+  "VERIFYING",
+  "NEEDS_REVIEW",
+  "SETTLEMENT_ERROR",
+];
 
 export function transition(from: DealState, event: DealEvent, ctx: DealContext): TransitionResult {
   const fail = (reason: string): never => {
@@ -134,21 +164,24 @@ export function transition(from: DealState, event: DealEvent, ctx: DealContext):
     case "verifier.decided": {
       need(["VERIFYING"]);
       const passes =
-        event.outcome === "PASS" || (event.outcome === "PARTIAL" && event.score >= event.partialPayMin);
+        event.outcome === "PASS" ||
+        (event.outcome === "PARTIAL" && event.score >= event.partialPayMin);
       if (!passes) {
         // FAIL is decided here; the deal is voided by settlement (settlement.voided).
         return { to: "VERIFYING" };
       }
       if (event.needsHumanReview || ctx.requiresHumanRelease) return { to: "NEEDS_REVIEW" };
       if (!ctx.hasDecision) fail("release requires a persisted Decision");
-      if (!ctx.hasPaypalAuth || !ctx.authValid) fail("release requires a valid, unexpired authorization");
+      if (!ctx.hasPaypalAuth || !ctx.authValid)
+        fail("release requires a valid, unexpired authorization");
       return { to: "RELEASING" };
     }
 
     case "human.approve":
       need(["NEEDS_REVIEW"]);
       if (!ctx.hasDecision) fail("release requires a persisted Decision");
-      if (!ctx.hasPaypalAuth || !ctx.authValid) fail("release requires a valid, unexpired authorization");
+      if (!ctx.hasPaypalAuth || !ctx.authValid)
+        fail("release requires a valid, unexpired authorization");
       return { to: "RELEASING" };
 
     case "human.reject":
@@ -170,14 +203,19 @@ export function transition(from: DealState, event: DealEvent, ctx: DealContext):
       return { to: event.partial ? "RELEASED_PARTIAL" : "RELEASED" };
 
     case "settlement.failed":
-      if (event.step === "void") need(VOIDABLE.filter((s) => s !== "SETTLEMENT_ERROR"));
+      if (event.step === "void") need(VOIDABLE);
+      else if (event.step === "refund") need(["SETTLEMENT_ERROR"]);
       else need(["RELEASING"]);
       return { to: "SETTLEMENT_ERROR" };
 
     case "human.retry":
       need(["SETTLEMENT_ERROR"]);
+      // A void retry stays here until settlement.voided records the result.
       if (event.step === "void") return { to: "SETTLEMENT_ERROR" };
       if (!ctx.hasPaypalAuth) fail("retry requires an authorization");
+      if (event.step === "capture" && !ctx.authValid)
+        fail("capture retry requires an unexpired authorization");
+      if (!ctx.hasDecision) fail("release retry requires a persisted Decision");
       return { to: "RELEASING" };
   }
 }
