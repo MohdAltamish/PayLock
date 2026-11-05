@@ -1,5 +1,5 @@
-// Paylock database schema. Models are added in Task 5 (WebhookEvent) and
-// Task 6 (full DESIGN.md section 2). Money columns are Decimal(12,2).
+// Paylock database schema (DESIGN.md section 2). Money columns are
+// Decimal(12,2); currency is USD only for the demo.
 
 generator client {
   provider = "prisma-client-js"
@@ -8,6 +8,283 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum DealState {
+  DRAFT
+  CONTRACTED
+  GUARDED
+  FLAGGED
+  AWAITING_APPROVAL
+  FUNDING
+  LOCKED
+  DELIVERED
+  VERIFYING
+  NEEDS_REVIEW
+  RELEASING
+  RELEASED
+  RELEASED_PARTIAL
+  SETTLEMENT_ERROR
+  VOIDED
+  CANCELLED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DecisionOutcome {
+  PASS
+  PARTIAL
+  FAIL
+}
+
+enum Actor {
+  HUMAN
+  AGENT
+  PAYPAL
+  SYSTEM
+}
+
+enum PolicyResult {
+  ALLOW
+  REQUIRE_APPROVAL
+  BLOCK
+}
+
+enum PaymentKind {
+  ORDER
+  AUTHORIZE
+  CAPTURE
+  VOID
+  PAYOUT
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  displayName   String
+  paypalEmail   String?
+  isAgent       Boolean       @default(false)
+  isDemo        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  spendPolicy   SpendPolicy?
+  trustProfile  TrustProfile?
+  apiKeys       ApiKey[]
+  dealsAsBuyer  Deal[]        @relation("buyer")
+  dealsAsSeller Deal[]        @relation("seller")
+  reportsMade   Report[]      @relation("reporter")
+  reportsAbout  Report[]      @relation("subject")
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  keyHash   String    @unique
+  scopes    String[]
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+}
+
+model SpendPolicy {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id])
+  maxPerDeal        Decimal @db.Decimal(12, 2)
+  dailyCap          Decimal @db.Decimal(12, 2)
+  approvalThreshold Decimal @db.Decimal(12, 2)
+  allowMediumRisk   Boolean @default(false)
+  currency          String  @default("USD")
+}
+
+model TrustProfile {
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  user                    User      @relation(fields: [userId], references: [id])
+  accountCreatedAt        DateTime  @default(now())
+  completedDeals          Int       @default(0)
+  failedDeals             Int       @default(0)
+  disputes                Int       @default(0)
+  reportsReceived         Int       @default(0)
+  payoutEmailChanges      Int       @default(0)
+  lastPayoutEmailChangeAt DateTime?
+  paypalVerified          Boolean   @default(false)
+  score                   Int       @default(50)
+  updatedAt               DateTime  @updatedAt
+}
+
+model Deal {
+  id                   String           @id @default(cuid())
+  buyerId              String
+  sellerId             String
+  buyer                User             @relation("buyer", fields: [buyerId], references: [id])
+  seller               User             @relation("seller", fields: [sellerId], references: [id])
+  state                DealState        @default(DRAFT)
+  amount               Decimal          @db.Decimal(12, 2)
+  currency             String           @default("USD")
+  payoutEmail          String?
+  paypalOrderId        String?          @unique
+  paypalAuthId         String?          @unique
+  authExpiresAt        DateTime?
+  requiresHumanRelease Boolean          @default(false)
+  blockReason          String?
+  isDemo               Boolean          @default(false)
+  fundedAt             DateTime?
+  contract             Contract?
+  risks                RiskAssessment[]
+  messages             Message[]
+  deliverables         Deliverable[]
+  decisions            Decision[]
+  policyDecisions      PolicyDecision[]
+  payments             PaymentRecord[]
+  events               DealEvent[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([buyerId, state])
+  @@index([state])
+}
+
+model Contract {
+  id            String    @id @default(cuid())
+  dealId        String    @unique
+  deal          Deal      @relation(fields: [dealId], references: [id])
+  title         String
+  scope         String
+  criteria      Json
+  deadline      DateTime?
+  partialPayMin Int       @default(70)
+  rawRequest    String
+  modelMeta     Json
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id])
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+model RiskAssessment {
+  id         String    @id @default(cuid())
+  dealId     String
+  deal       Deal      @relation(fields: [dealId], references: [id])
+  score      Int
+  level      RiskLevel
+  signals    Json
+  summary    String
+  action     String
+  fallback   Boolean   @default(false)
+  overridden Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+model Deliverable {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id])
+  kind      String
+  content   String
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Decision {
+  id               String          @id @default(cuid())
+  dealId           String
+  deal             Deal            @relation(fields: [dealId], references: [id])
+  deliverableId    String
+  outcome          DecisionOutcome
+  score            Int
+  perCriterion     Json
+  reasoning        String
+  payoutPercent    Int
+  needsHumanReview Boolean         @default(false)
+  overriddenBy     String?
+  overrideReason   String?
+  createdAt        DateTime        @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+model PolicyDecision {
+  id         String          @id @default(cuid())
+  dealId     String
+  deal       Deal            @relation(fields: [dealId], references: [id])
+  action     String
+  result     PolicyResult
+  reasons    Json
+  inputs     Json
+  decisionId String?
+  createdAt  DateTime        @default(now())
+  payments   PaymentRecord[]
+
+  @@index([dealId, action])
+}
+
+model PaymentRecord {
+  id               String          @id @default(cuid())
+  dealId           String
+  deal             Deal            @relation(fields: [dealId], references: [id])
+  kind             PaymentKind
+  attempt          Int             @default(1)
+  idempotencyKey   String          @unique
+  policyDecisionId String?
+  policyDecision   PolicyDecision? @relation(fields: [policyDecisionId], references: [id])
+  paypalId         String?         @unique
+  amount           Decimal?        @db.Decimal(12, 2)
+  status           PaymentStatus   @default(PENDING)
+  paypalStatus     String?
+  raw              Json?
+  error            Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([dealId, kind])
+  @@index([status])
+}
+
+model DealEvent {
+  id        String     @id @default(cuid())
+  dealId    String
+  deal      Deal       @relation(fields: [dealId], references: [id])
+  type      String
+  fromState DealState?
+  toState   DealState?
+  actor     Actor
+  payload   Json
+  createdAt DateTime   @default(now())
+
+  @@index([dealId, createdAt])
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  subjectId  String
+  reporter   User     @relation("reporter", fields: [reporterId], references: [id])
+  subject    User     @relation("subject", fields: [subjectId], references: [id])
+  dealId     String?
+  reason     String
+  createdAt  DateTime @default(now())
+
+  @@index([subjectId])
 }
 
 // Verified PayPal webhook deliveries, deduplicated by PayPal's event id
@@ -23,5 +300,19 @@ model WebhookEvent {
   raw         Json
 
   @@index([processedAt])
+  @@index([dealId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  dealId      String?
+  actor       Actor
+  actorId     String?
+  action      String
+  before      Json?
+  after       Json?
+  payloadHash String
+  createdAt   DateTime @default(now())
+
   @@index([dealId])
 }
