@@ -58,7 +58,7 @@ Buyer                 Paylock                         PayPal                 Sel
 - **Authorization declined** (`INSTRUMENT_DECLINED`, `TRANSACTION_REFUSED`, or status DENIED): FUNDING -> CANCELLED; the timeline shows the PayPal reason. No retry with the same instrument.
 - **Order mismatch** (amount, currency or `custom_id` differs, or the order is not APPROVED): any authorization created is voided; FUNDING -> CANCELLED with `ORDER_MISMATCH` and a timeline alert.
 - **Daily cap exceeded at authorize**: the new authorization is voided; FUNDING -> CANCELLED with `POLICY_CAP`.
-- **Reservation expired**: authorization `expiration_time` passes while LOCKED -> VOIDED with `AUTH_EXPIRED`; the timeline says "reservation expired".
+- **Reservation expired**: authorization `expiration_time` passes while LOCKED (or while delivery, verification or review is still open) -> VOIDED with `AUTH_EXPIRED`; the timeline says "reservation expired".
 - **Settlement error**: capture, payout or void fails after retries -> SETTLEMENT_ERROR with a timeline alert. The buyer retries; the retry resumes only the failed step (a payout re-send uses a new `sender_batch_id` and the same `sender_item_id = dealId`, and only after a terminal failure). If a payout cannot succeed after capture, the runbook in SECURITY_PRIVACY section 4 applies (refund is P2).
 
 ## 6. Agent-to-agent path (P1)
