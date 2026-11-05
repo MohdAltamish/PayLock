@@ -140,6 +140,15 @@ npm run e2e          # Playwright: happy, scam, failure paths (sandbox card fund
 npm run e2e:popup    # Playwright through the real sandbox buyer popup (may be flaky)
 ```
 
+`npm test` runs unit tests and, when Postgres is reachable, the `*.db.test.ts` integration suites against a separate `paylock_test` database (`TEST_DATABASE_URL`; created and migrated automatically). Set `REQUIRE_DB_TESTS=1` in CI so a missing database fails the run. Integration suites run the real PayPal adapter over an in-memory sandbox and are labelled "mocked PayPal".
+
+Sandbox end-to-end check of the deal core (no browser):
+
+```bash
+AGENTS_MODE=stub E2E_FUNDING=card PORT=4100 npx tsx --env-file=.env apps/api/src/server.ts
+API_URL=http://localhost:4100 scripts/curl-happy.sh   # PASS -> RELEASED, FAIL -> VOIDED
+```
+
 ## 7. Demo walkthrough (local or hosted)
 1. Sign in as Buyer (demo login).
 2. Create deal with persona "Honest Seller". Confirm contract. Risk LOW. Reserve funds with the sandbox buyer login in the PayPal popup.

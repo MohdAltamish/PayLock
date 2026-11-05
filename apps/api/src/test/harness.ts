@@ -11,7 +11,12 @@ import { PrismaWebhookStore } from "../webhooks/store.js";
 import { testConfig } from "./helpers.js";
 import { PayPalSim } from "./paypal-sim.js";
 
-const quiet = { info() {}, warn() {}, error() {}, debug() {} };
+const quiet = {
+  info() {},
+  warn: (o: object, m: string) => process.env.DEBUG_TESTS && console.warn(m, o),
+  error: (o: object, m: string) => process.env.DEBUG_TESTS && console.error(m, o),
+  debug() {},
+};
 
 export interface Harness {
   app: FastifyInstance;

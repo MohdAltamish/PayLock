@@ -327,7 +327,11 @@ Guards:
 
 | Method | Path | Purpose |
 |--------|------|---------|
+| GET | `/auth/demo-users` | Seeded demo users for the persona picker (id, display name, role) |
 | POST | `/auth/demo-login` | Demo session (signed httpOnly cookie) for a seeded user |
+| POST | `/auth/logout` | Clear the session cookie |
+| GET | `/auth/me` | Current user and role |
+| POST | `/users/:id/api-keys` | Owner only, human only. Creates a scoped agent key; the key is shown once, only its sha256 is stored |
 | GET | `/config/paypal` | Browser-safe config: `{ clientId, env }` (decision K) |
 | POST | `/deals` | Create from NL; runs Negotiator; returns deal with contract |
 | POST | `/deals/:id/messages` | Add a message (untrusted text) |
@@ -340,6 +344,7 @@ Guards:
 | POST | `/deals/:id/deliverables` | Seller submits deliverable; triggers Verifier |
 | POST | `/deals/:id/decisions/:decisionId/override` | Human approve or reject of a verifier decision |
 | POST | `/deals/:id/settlement/retry` | Buyer retries the failed settlement step from SETTLEMENT_ERROR |
+| POST | `/deals/:id/settlement/refund` | P2. Buyer refunds a completed capture whose payout ended in a terminal failure (`PolicyDecision(refund)`) |
 | GET | `/deals/:id` | Deal with contract, latest risk, decisions, payments |
 | GET | `/deals/:id/events` | SSE stream of DealEvents (`Last-Event-ID` replay, 15s heartbeat) |
 | GET | `/deals` | List for current user |
@@ -348,6 +353,8 @@ Guards:
 | POST | `/webhooks/paypal` | PayPal webhook receiver (raw body) |
 | GET | `/healthz` | Health: DB and PayPal token |
 | POST | `/test/fund-with-card` | E2E only. Registered only when `PAYPAL_ENV=sandbox`, `E2E_FUNDING=card` and `NODE_ENV != production`; 404 otherwise |
+
+Agent keys (`X-Agent-Key`) may call create, messages, guard, cancel and deliverables (scopes `deals:write`, `deliverables:write`). Approve, override, fund, authorize, decision override, retry, refund and policy changes need a human session. Cookie-authenticated writes from a foreign `Origin` get 403.
 
 Agent-to-agent (P1): same endpoints with `X-Agent-Key`. Agents may use PayPal MCP tools read-only for their own reconciliation; no MCP write tools.
 
@@ -480,3 +487,15 @@ A sweeper resumes any `PENDING` `PaymentRecord` with the same idempotency key af
 - The route verifies the signature from the raw body, inserts `WebhookEvent` (duplicate id: return 200, do nothing), returns 200, then processes asynchronously.
 - Processing maps the event to a deal (`custom_id`, authorization id, capture id, or `sender_item_id`), appends a "PayPal confirmed" `DealEvent`, and wakes the reconciler.
 - The reconciler reads the current resource from PayPal with GET and applies only forward transitions. A webhook never moves a deal backwards and never triggers a money write.
+- Timeline entries are deduplicated per (event type, resource id, status), because PayPal repeats some events with new event ids.
+- One local repair is allowed: a `PAYMENT.PAYOUTS-ITEM.*` event whose `payout_item.sender_item_id` is the deal id fills in a missing payout batch id on the pending PAYOUT record, after `GET /v1/payments/payouts/{id}` confirms `sender_batch_id = paylock-{dealId}-{attempt}` (C8 recovery).
+
+## 11. Settlement driver and sweeper (Task 11)
+
+- `Settlement.drive` (requests and the sweeper) may write to PayPal; `Settlement.refresh` (webhook reconciler) only reads.
+- Capture: PolicyDecision + PENDING record in one transaction, capture with `final_capture: true`, then `GET /v2/payments/captures/{id}` to compare amount and status (C7). COMPLETED records the capture; PENDING shows "Confirming with PayPal…" and the sweeper polls the GET until COMPLETED or DECLINED; DECLINED, FAILED or an amount mismatch go to SETTLEMENT_ERROR. No payout is sent until the capture is COMPLETED.
+- A write whose outcome is unknown (network, 5xx, 429, in progress) stays PENDING and is resumed with the same key. A definitive error marks the record FAILED; a retry is a new attempt with a new key.
+- `AUTHORIZATION_ALREADY_CAPTURED` on a capture retry is recovered from `GET order` (`payments.captures[0]`), then confirmed by GET.
+- Payout: re-POST after a lost response hits the used `sender_batch_id` (400 `USER_BUSINESS_ERROR`), which is recorded as "already sent"; the batch id then comes from the PAYOUTS-ITEM webhook (section 10).
+- A void needed after funding was cancelled (ORDER_MISMATCH, POLICY_CAP at authorize, or a cancel/timeout racing PayPal) is recorded on the CANCELLED deal; the sweeper retries a PENDING void on any state.
+- The sweeper also restarts verification stuck in DELIVERED, voids FAIL or human-rejected decisions whose void never ran, times out FUNDING (`FUNDING_TIMEOUT_MINUTES`, default 30), applies `AUTH_EXPIRED`, voids LOCKED deals past the contract deadline, and retries unprocessed webhooks (max 5 attempts).
