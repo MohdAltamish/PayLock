@@ -31,7 +31,8 @@
     "mcp:list-tools": "tsx --env-file=.env scripts/mcp-list-tools.ts",
     "postinstall": "prisma generate --schema apps/api/prisma/schema.prisma",
     "seed": "tsx --env-file=.env apps/api/src/db/seed.ts",
-    "demo:reset": "tsx --env-file=.env apps/api/src/db/seed.ts --reset"
+    "demo:reset": "tsx --env-file=.env apps/api/src/db/seed.ts --reset",
+    "llm:probe": "tsx --env-file=.env scripts/llm-probe.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

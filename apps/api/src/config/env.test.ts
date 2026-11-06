@@ -54,3 +54,46 @@ describe("loadConfig", () => {
     }
   });
 });
+
+describe("loadConfig: LLM and agents", () => {
+  it("validates LLM_BASE_URL and keeps it", () => {
+    const c = loadConfig({
+      ...base,
+      LLM_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    });
+    expect(c.llm.baseUrl).toBe("https://generativelanguage.googleapis.com/v1beta/openai/");
+    expect(c.llm.jsonMode).toBe("json_schema");
+    expect(() => loadConfig({ ...base, LLM_BASE_URL: "not a url" })).toThrow(/LLM_BASE_URL/);
+  });
+  it("requires https LLM_BASE_URL in production", () => {
+    expect(() =>
+      loadConfig({
+        ...base,
+        NODE_ENV: "production",
+        SESSION_SECRET: "x".repeat(40),
+        LLM_BASE_URL: "http://llm.internal/v1",
+      }),
+    ).toThrow(/https/);
+  });
+  it("live agents need a key and a model; replay does not", () => {
+    expect(() => loadConfig({ ...base, AGENTS_MODE: "live" })).toThrow(/LLM_API_KEY/);
+    expect(loadConfig({ ...base, AGENTS_MODE: "replay" }).agentsMode).toBe("replay");
+    const c = loadConfig({ ...base, AGENTS_MODE: "live", LLM_API_KEY: "k", LLM_MODEL: "m" });
+    expect(c.llm.model).toBe("m");
+  });
+  it("never allows loopback fetch hosts or run_checks in production", () => {
+    const prod = {
+      ...base,
+      NODE_ENV: "production",
+      SESSION_SECRET: "x".repeat(40),
+      FETCH_URL_DEV_ALLOW_HOSTS: "localhost",
+      RUN_CHECKS_ENABLED: "1",
+    };
+    expect(loadConfig(prod).fetchUrlDevAllowHosts).toEqual([]);
+    expect(loadConfig(prod).runChecksEnabled).toBe(false);
+    expect(
+      loadConfig({ ...base, FETCH_URL_DEV_ALLOW_HOSTS: "localhost, 127.0.0.1" })
+        .fetchUrlDevAllowHosts,
+    ).toEqual(["localhost", "127.0.0.1"]);
+  });
+});

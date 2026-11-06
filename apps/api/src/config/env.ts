@@ -38,8 +38,48 @@ const EnvSchema = z
     E2E_FUNDING: z.enum(["off", "card"]).default("off"),
     FUNDING_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
     SWEEPER_INTERVAL_MS: z.coerce.number().int().min(0).max(600_000).default(5000),
+    // --- LLM (Phase 3). openai = any OpenAI-compatible endpoint at LLM_BASE_URL. ---
+    LLM_PROVIDER: z.enum(["openai", "anthropic", "replay"]).default("openai"),
+    LLM_BASE_URL: z
+      .url()
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    LLM_API_KEY: optionalString,
+    LLM_MODEL: optionalString,
+    LLM_JSON_MODE: z.enum(["json_schema", "json_object"]).default("json_schema"),
+    LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
+    // 1 = record every live LLM reply as a replay fixture.
+    LLM_RECORD: flag,
+    REPLAY_DIR: optionalString,
+    // Comma-separated hosts fetch_url may reach on loopback (never in production, decision I).
+    FETCH_URL_DEV_ALLOW_HOSTS: optionalString,
+    // Local-only sandboxed repo checks (ADR-010).
+    RUN_CHECKS_ENABLED: flag,
   })
   .superRefine((env, ctx) => {
+    const live = env.AGENTS_MODE === "live" && env.LLM_PROVIDER !== "replay";
+    if (live && !env.LLM_API_KEY)
+      ctx.addIssue({
+        code: "custom",
+        path: ["LLM_API_KEY"],
+        message: "LLM_API_KEY is required for live agents",
+      });
+    if (live && !env.LLM_MODEL)
+      ctx.addIssue({
+        code: "custom",
+        path: ["LLM_MODEL"],
+        message: "LLM_MODEL is required for live agents",
+      });
+    if (
+      env.LLM_BASE_URL &&
+      env.NODE_ENV === "production" &&
+      !env.LLM_BASE_URL.startsWith("https://")
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["LLM_BASE_URL"],
+        message: "LLM_BASE_URL must be https in production",
+      });
     if (env.NODE_ENV === "production" && (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32)) {
       ctx.addIssue({
         code: "custom",
@@ -75,6 +115,18 @@ export interface Config {
   fundingTimeoutMinutes: number;
   /** 0 disables the background sweeper (tests). */
   sweeperIntervalMs: number;
+  llm: {
+    provider: Env["LLM_PROVIDER"];
+    baseUrl: string;
+    apiKey?: string;
+    model?: string;
+    jsonMode: Env["LLM_JSON_MODE"];
+    timeoutMs: number;
+    record: boolean;
+    replayDir: string;
+  };
+  fetchUrlDevAllowHosts: string[];
+  runChecksEnabled: boolean;
 }
 
 export const PAYPAL_BASE_URLS = {
@@ -120,5 +172,28 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       e.E2E_FUNDING === "card" && e.PAYPAL_ENV === "sandbox" && e.NODE_ENV !== "production",
     fundingTimeoutMinutes: e.FUNDING_TIMEOUT_MINUTES,
     sweeperIntervalMs: e.SWEEPER_INTERVAL_MS,
+    llm: {
+      provider: e.LLM_PROVIDER,
+      baseUrl:
+        e.LLM_BASE_URL ??
+        (e.LLM_PROVIDER === "anthropic"
+          ? "https://api.anthropic.com"
+          : "https://api.openai.com/v1"),
+      apiKey: e.LLM_API_KEY,
+      model: e.LLM_MODEL,
+      jsonMode: e.LLM_JSON_MODE,
+      timeoutMs: e.LLM_TIMEOUT_MS,
+      record: e.LLM_RECORD,
+      replayDir: e.REPLAY_DIR ?? "fixtures/replay",
+    },
+    // Decision I: loopback hosts only outside production.
+    fetchUrlDevAllowHosts:
+      e.NODE_ENV === "production"
+        ? []
+        : (e.FETCH_URL_DEV_ALLOW_HOSTS ?? "")
+            .split(",")
+            .map((h) => h.trim().toLowerCase())
+            .filter(Boolean),
+    runChecksEnabled: e.RUN_CHECKS_ENABLED && e.NODE_ENV !== "production",
   };
 }

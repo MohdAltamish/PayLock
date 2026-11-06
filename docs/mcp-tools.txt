@@ -1,5 +1,5 @@
 PayPal sandbox MCP tool list
-Generated: 2026-11-05T13:18:53.644Z by scripts/mcp-list-tools.ts
+Generated: 2026-11-05T16:17:54.580Z by scripts/mcp-list-tools.ts
 Endpoint:  https://mcp.sandbox.paypal.com/sse (SSE transport)
 Auth:      app client-credentials token (not the coding assistant's token)
 Server:    PayPal MCP Agent 1.0.0

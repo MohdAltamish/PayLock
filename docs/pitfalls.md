@@ -127,3 +127,8 @@ Platform payee confirmed: every smoke order's `purchase_units[0].payee.email_add
 - The three captures taken while review was on stay `PENDING_REVIEW`; turning review off does not release them. Old pending captures are left as they are (sandbox only, small amounts).
 - `PAYPAL_PLATFORM_EMAIL` unchanged. Note: that variable is informational; PayPal credits the account the REST app belongs to, whatever the env says.
 - INSTRUCTIONS prerequisites already say payment review must be off. Settlement still treats PENDING as "Confirming with PayPal" and never pays out until COMPLETED.
+
+## 2026-11-05: Phase 3 re-checks (MCP, LLM structured output)
+
+- **MCP re-probe (start of Phase 3):** `npm run mcp:list-tools` still lists 46 tools, and `list_disputes` and `list_transactions` still return `PAYPAL_API_SETUP_ERROR: Unsupported cache mode: default`. MCP enrichment stays **off** (cut list item 3); the DISPUTES signal keeps using `TrustProfile.disputes`.
+- **LLM structured output (Task 12, not a PayPal error):** `npm run llm:probe` against `LLM_BASE_URL` (Gemini OpenAI-compatible endpoint, `LLM_MODEL` gemini-2.5-flash) with a prompt that asks the model to break the schema. Strict `response_format: json_schema` was honored 3/3; `json_object` was violated 3/3 (out-of-enum value). Decision: `LLM_JSON_MODE=json_schema` by default; every reply is still validated with Zod and retried once. `jsonSchemaFor` drops `pattern`, `format`, length and item-count keywords before sending (Zod checks them) to stay within what the endpoint's strict mode accepts.
