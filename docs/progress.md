@@ -88,3 +88,35 @@ E2E evidence (2026-11-06, stub agents, real sandbox, card funding): happy, scam 
 - ⏳ Accessibility pass with axe (optional, not required for demo)
 - ⏳ Eval recording (blocked on OpenRouter quota reset at 00:00 UTC)
 
+
+## Phase 6: Harden (budget 7h, cut trigger 8.75h) - COMPLETED
+
+| Task | Start | End | Notes |
+|---|---|---|---|
+| Fresh-clone test | 11:01 | 11:05 | node:20 container, 74 seconds, real sandbox |
+| Simulator tests | 11:38 | 11:46 | Production safety tests, void-all fix |
+| Void authorizations | 11:50 | 11:52 | Voided 2 pending from popup test |
+
+**Phase 6 completion evidence (2026-11-06 11:52 UTC):**
+
+✅ **1. Fresh-clone test in node:20 container**
+- Clone, install, build, test, seed, curl-happy: 74 seconds
+- Real PayPal sandbox (debug_ids logged)
+- PASS -> RELEASED, FAIL -> VOIDED
+- Added jq to prerequisites
+
+✅ **2. Simulator safety**
+- E2E_FUNDING=card rejected in production
+- In-memory PayPalSim only in test harness
+- All E2E uses real sandbox
+- Tests: 655 pass, lint/typecheck clean
+
+✅ **3. Void authorizations**
+- void-all.ts script working
+- Voided 2 pending authorizations from popup test
+- 2H283881EX593105L, 2Y593976FE066694Y
+
+**Remaining:**
+- ⏳ axe accessibility pass (Item 3 - in progress)
+- ⏳ Eval recording (waits for OpenRouter quota reset)
+
