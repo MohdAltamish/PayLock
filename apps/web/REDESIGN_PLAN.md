@@ -13,19 +13,19 @@
 | #   | Task                                                        | Status                   |
 | --- | ----------------------------------------------------------- | ------------------------ |
 | 1   | Worktree, baseline checks, before screenshots               | **Done** (`d1c409e`)     |
-| 2   | Tokens, Tailwind, app shell                                 | Next                     |
-| 3   | Core primitives                                             | Planned                  |
-| 5   | Landing                                                     | Planned                  |
-| 7   | Deal detail layout                                          | Planned                  |
-| 8   | Timeline                                                    | Planned                  |
-| 11  | Risk Banner, Guard & fund step, override and cancel dialogs | Planned                  |
-| 12  | Decision Panel and review                                   | Planned                  |
-| 9   | Stepper and the Describe step                               | Planned                  |
-| 10  | Contract step                                               | Planned                  |
-| 6   | Deal list                                                   | Planned                  |
-| 13  | Policy page, light restyle                                  | Planned (minimal)        |
-| 14  | One screenshot pass                                         | Planned (minimal)        |
-| 15  | Final verification and report                               | Planned                  |
+| 2   | Tokens, Tailwind, app shell                                 | **Done** (`2650a55`)     |
+| 3   | Core primitives                                             | **Done** (`bb6f8e3`)     |
+| 5   | Landing                                                     | **Done** (`906a753`)     |
+| 7   | Deal detail layout                                          | **Done** (`b0ed40b`)     |
+| 8   | Timeline                                                    | **Done** (`b0ed40b`)     |
+| 11  | Risk Banner, Guard & fund step, override and cancel dialogs | **Done** (`b0ed40b`)     |
+| 12  | Decision Panel and review                                   | **Done** (`b0ed40b`)     |
+| 9   | Stepper and the Describe step                               | **Done** (`841f160`)     |
+| 10  | Contract step                                               | **Done** (`841f160`)     |
+| 6   | Deal list                                                   | **Done** (`add91e1`)     |
+| 13  | Policy page, light restyle                                  | **Done** (`b42e739`)     |
+| 14  | One screenshot pass                                         | **Done** (14 captures)   |
+| 15  | Final verification and report                               | **Done** (All passed)    |
 
 Order: 1, 2, 3, 5, 7, 8, 11, 12, then 9 and 10, then 6, then 13, 14 and 15. Task 4 (feedback) is reduced to the two dialogs, which are built inside Task 11.
 
