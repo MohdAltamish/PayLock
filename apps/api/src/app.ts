@@ -55,6 +55,8 @@ export async function buildApp({
   app.get("/config/paypal", async () => ({
     clientId: config.paypal.clientId,
     env: config.paypal.env,
+    // Lets the UI show the E2E-only card button; true only when the route is registered.
+    testCardFunding: config.e2eCardFunding,
   }));
 
   const s = deps.services;

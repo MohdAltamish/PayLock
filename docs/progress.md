@@ -35,3 +35,22 @@ Sandbox evidence (curl-happy.sh, 2026-11-05 16:11 UTC):
 
 - PASS: order `4YS46936GF694262N`, authorization `90311013EM075042D`, capture `450956632J3278548` (COMPLETED, confirmed by GET), payout batch `GDK9ME9TX273N` (SUCCESS after ~20 s of polling), 2.00 USD -> RELEASED.
 - FAIL: order `9AA39341D7728353J`, authorization `7GR29215KV4140849` voided (200) -> VOIDED / VERIFICATION_FAILED.
+
+## Phase 3: Agents (budget 9h, cut trigger 11.25h)
+
+| Task | Start | End | Notes |
+|---|---|---|---|
+| Task 12 LlmClient | | | Committed `9f11604`; times not logged |
+| Task 13 Skills | | | Committed `35ac41d`; times not logged |
+| Tasks 14 to 16 Negotiator, Guardian, Verifier, eval | | | Built in a session whose times were not logged |
+
+Status (2026-11-06): code, unit tests (643) and lint pass. `npm run eval` (replay) fails because only 1 replay fixture exists. `npm run eval:record` hit OpenRouter's `free-models-per-day` 429 on every call, so fixtures could not be recorded. Blocked on the owner: wait for the daily reset, or add OpenRouter credits (raises the free-model daily limit), then run `npm run eval:record` and `npm run eval`. The optional Verifier tool loop (decision H) waits for a passing eval.
+
+## Phase 4: Guardrails and UI (budget 10h, cut trigger 12.5h)
+
+| Task | Start | End | Notes |
+|---|---|---|---|
+| Tasks 17 to 20 web app, wizard, v6 button, deal detail, Playwright | | | Built in a session whose times were not logged |
+| E2E fixes and 3 green runs | 14:48 | 15:10 | `/config/paypal` now returns `testCardFunding`; stub Guardian uses the shared summary wording |
+
+E2E evidence (2026-11-06, stub agents, real sandbox, card funding): happy, scam and fail paths passed 3 runs in a row. Not yet done: an E2E run with `E2E_AGENTS=replay` (needs the eval fixtures) and the manual `npm run e2e:popup` run.

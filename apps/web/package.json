@@ -1,0 +1,25 @@
+{
+  "name": "@paylock/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "e2e": "playwright test",
+    "e2e:popup": "E2E_POPUP=1 playwright test e2e/popup.spec.ts --headed"
+  },
+  "dependencies": {
+    "@paylock/schemas": "*",
+    "next": "15.5.29",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
+  }
+}

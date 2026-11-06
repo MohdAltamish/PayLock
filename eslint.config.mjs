@@ -18,7 +18,16 @@ const noFloatMoney = [
 
 export default tseslint.config(
   {
-    ignores: ["**/node_modules/**", "**/dist/**", "**/coverage/**", "**/.next/**", "AI-Toolkit/**"],
+    ignores: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/coverage/**",
+      "**/.next/**",
+      "**/next-env.d.ts",
+      "**/test-results/**",
+      "**/playwright-report/**",
+      "AI-Toolkit/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
