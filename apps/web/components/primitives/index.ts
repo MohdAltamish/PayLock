@@ -5,3 +5,4 @@ export * from "./Field";
 export * from "./Spinner";
 export * from "./Skeleton";
 export * from "./Alert";
+export * from "./Dialog";

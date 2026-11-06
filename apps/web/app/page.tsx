@@ -24,7 +24,7 @@ export default function Landing() {
   useEffect(() => {
     api<{ users: DemoUser[] }>("/auth/demo-users").then(
       (r) => setUsers(r.users),
-      () => setError("The Paylock API is not reachable.")
+      () => setError("The Paylock API is not reachable."),
     );
   }, []);
 
