@@ -3,8 +3,9 @@
 import { DEMO_PRESETS } from "@paylock/schemas";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ErrorNote, Shell } from "@/components/ui";
+import { ErrorNote, Shell, useMe } from "@/components/ui";
 import { Stepper } from "@/components/deal/Stepper";
+import { Alert } from "@/components/primitives/Alert";
 import { Button } from "@/components/primitives/Button";
 import { Card } from "@/components/primitives/Card";
 import { Field, Select, Textarea } from "@/components/primitives/Field";
@@ -19,6 +20,7 @@ interface DemoUser {
 /** Step 1: describe the job. The contract, risk check and funding follow on the deal page. */
 export default function NewDeal() {
   const router = useRouter();
+  const me = useMe();
   const [sellers, setSellers] = useState<DemoUser[]>([]);
   const [sellerId, setSellerId] = useState("");
   const [request, setRequest] = useState("");
@@ -71,6 +73,14 @@ export default function NewDeal() {
         </div>
 
         <Card>
+          {me?.role === "seller" && (
+            <Alert variant="warning" title="Buyer account required" className="mb-5">
+              You are signed in as a seller (<strong>{me.displayName}</strong>). In Paylock, only
+              buyers set spend policies and draft deals. Please click <strong>Switch user</strong> in
+              the top right to select a buyer account.
+            </Alert>
+          )}
+
           <form className="space-y-5" onSubmit={submit}>
             <div>
               <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
@@ -136,12 +146,16 @@ export default function NewDeal() {
             <div className="pt-2 sticky bottom-4 sm:static z-10 bg-surface/90 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-2 sm:p-0 rounded-control border sm:border-0 border-border/80 sm:shadow-none shadow-lg">
               <Button
                 type="submit"
-                disabled={busy || !sellerId || request.length < 10}
+                disabled={busy || !sellerId || request.length < 10 || me?.role === "seller"}
                 loading={busy}
                 data-testid="create-deal"
                 className="w-full sm:w-auto"
               >
-                {busy ? "Paylock AI is drafting the contract…" : "Draft the contract"}
+                {busy
+                  ? "Paylock AI is drafting the contract…"
+                  : me?.role === "seller"
+                    ? "Buyer account required"
+                    : "Draft the contract"}
               </Button>
             </div>
           </form>
