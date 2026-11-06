@@ -323,7 +323,7 @@ describe.skipIf(!dbAvailable())("deal API auth", () => {
 
   it("GET /config/paypal returns only the client id", async () => {
     const r = await h.app.inject({ method: "GET", url: "/config/paypal" });
-    expect(r.json()).toEqual({ clientId: "test-client-id", env: "sandbox" });
+    expect(r.json()).toEqual({ clientId: "test-client-id", env: "sandbox", testCardFunding: true });
     expect(r.body).not.toContain("secret");
   });
 });

@@ -46,11 +46,14 @@ const EnvSchema = z
       .or(z.literal("").transform(() => undefined)),
     LLM_API_KEY: optionalString,
     LLM_MODEL: optionalString,
+    LLM_MODEL_FALLBACKS: optionalString,
     LLM_JSON_MODE: z.enum(["json_schema", "json_object"]).default("json_schema"),
     LLM_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
     // 1 = record every live LLM reply as a replay fixture.
     LLM_RECORD: flag,
     REPLAY_DIR: optionalString,
+    // live: in replay mode, a missing fixture calls the live LLM instead of failing safe.
+    LLM_REPLAY_FALLBACK: z.enum(["off", "live"]).default("off"),
     // Comma-separated hosts fetch_url may reach on loopback (never in production, decision I).
     FETCH_URL_DEV_ALLOW_HOSTS: optionalString,
     // Local-only sandboxed repo checks (ADR-010).
@@ -120,10 +123,12 @@ export interface Config {
     baseUrl: string;
     apiKey?: string;
     model?: string;
+    fallbackModels: string[];
     jsonMode: Env["LLM_JSON_MODE"];
     timeoutMs: number;
     record: boolean;
     replayDir: string;
+    replayFallback: boolean;
   };
   fetchUrlDevAllowHosts: string[];
   runChecksEnabled: boolean;
@@ -181,10 +186,15 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
           : "https://api.openai.com/v1"),
       apiKey: e.LLM_API_KEY,
       model: e.LLM_MODEL,
+      fallbackModels: (e.LLM_MODEL_FALLBACKS ?? "")
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean),
       jsonMode: e.LLM_JSON_MODE,
       timeoutMs: e.LLM_TIMEOUT_MS,
       record: e.LLM_RECORD,
       replayDir: e.REPLAY_DIR ?? "fixtures/replay",
+      replayFallback: e.LLM_REPLAY_FALLBACK === "live",
     },
     // Decision I: loopback hosts only outside production.
     fetchUrlDevAllowHosts:

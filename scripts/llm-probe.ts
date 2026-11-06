@@ -55,7 +55,10 @@ async function call(mode: "json_schema" | "json_object") {
     method: "POST",
     headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
     body: JSON.stringify({ model, temperature: 0, messages, response_format }),
-  });
+    signal: AbortSignal.timeout(90_000),
+  }).catch((e: Error) => e);
+  if (res instanceof Error)
+    return { ok: false, ms: Date.now() - t0, note: `request failed: ${res.name}` };
   const ms = Date.now() - t0;
   const body = (await res.json().catch(() => ({}))) as {
     error?: { message?: string };

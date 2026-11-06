@@ -13,6 +13,7 @@ import type { PayPalLogger } from "../paypal/http.js";
 import { committedToday, recordPolicyDecision } from "../policy/decisions.js";
 import { evaluateGuard, guardPolicy } from "../policy/engine.js";
 import type { Settlement } from "../settlement/settlement.js";
+import { PERSONAS } from "../demo/personas.js";
 import type { DealExecutor } from "./executor.js";
 import { invalidState } from "./funding.js";
 import { latestRecord } from "./payments.js";
@@ -104,6 +105,12 @@ export class DealService {
         },
       },
     });
+    // Demo personas open the conversation with their scripted message (untrusted text).
+    const persona = seller.isDemo ? personaForEmail(seller.email) : undefined;
+    if (persona?.openingMessage)
+      await this.d.db.message.create({
+        data: { dealId: deal.id, authorId: seller.id, body: persona.openingMessage },
+      });
     return this.d.exec.apply(
       deal.id,
       { type: "contract.created" },
@@ -443,6 +450,11 @@ export class DealService {
     if (action === "approve" && next === "RELEASING") await this.d.settlement.release(dealId);
     if (action === "reject") await this.d.settlement.voidAuthorization(dealId, "HUMAN_REJECTED");
   }
+}
+
+function personaForEmail(email: string) {
+  const key = /^paylock-([a-z-]+)@/.exec(email)?.[1];
+  return PERSONAS.find((p) => p.key === key);
 }
 
 function domainOf(email: string | null | undefined): string | null {

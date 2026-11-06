@@ -225,7 +225,7 @@ describe("providers", () => {
         maxTokens: 1,
       }),
     ).rejects.toThrow(/503/);
-    expect(calls).toBe(3);
+    expect(calls).toBe(5);
     calls = 0;
     await expect(
       mk(400).complete({

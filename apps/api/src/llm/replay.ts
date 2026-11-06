@@ -45,12 +45,19 @@ export class ReplayMissError extends Error {
 
 export class ReplayProvider implements LlmProvider {
   readonly kind = "replay";
-  constructor(private readonly dir: string) {}
+  /** `fallback` (LLM_REPLAY_FALLBACK=live): on a miss, call it instead of failing. Off by default. */
+  constructor(
+    private readonly dir: string,
+    private readonly fallback?: LlmProvider,
+  ) {}
 
   async complete(req: LlmRequest): Promise<LlmResponse> {
     const key = replayKey(req);
     const f = file(this.dir, req, key);
-    if (!existsSync(f)) throw new ReplayMissError(key, req.name);
+    if (!existsSync(f)) {
+      if (this.fallback) return this.fallback.complete(req);
+      throw new ReplayMissError(key, req.name);
+    }
     const fx = JSON.parse(readFileSync(f, "utf8")) as ReplayFixture;
     return { text: fx.text, model: fx.model, latencyMs: 0, fixture: `${req.name}/${key}` };
   }
@@ -66,9 +73,14 @@ export class RecordingProvider implements LlmProvider {
   }
 
   async complete(req: LlmRequest): Promise<LlmResponse> {
-    const res = await this.inner.complete(req);
     const key = replayKey(req);
     const f = file(this.dir, req, key);
+    // Already recorded: reuse it (saves quota; set LLM_RERECORD=1 to refresh).
+    if (existsSync(f) && process.env.LLM_RERECORD !== "1") {
+      const fx = JSON.parse(readFileSync(f, "utf8")) as ReplayFixture;
+      return { text: fx.text, model: fx.model, latencyMs: 0, fixture: `${req.name}/${key}` };
+    }
+    const res = await this.inner.complete(req);
     mkdirSync(path.dirname(f), { recursive: true });
     const fx: ReplayFixture = {
       key,

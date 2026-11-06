@@ -50,7 +50,7 @@ export const PERSONAS: Persona[] = [
     accountAgeDays: 45,
     completedDeals: 0,
     failedDeals: 0,
-    paypalVerified: true,
+    paypalVerified: false,
     payoutEmailChangedMinutesAgo: null,
     openingMessage:
       "Let's skip the platform fees. Send it as PayPal Friends and Family and I'll deliver tonight. This price is only good for the next hour.",

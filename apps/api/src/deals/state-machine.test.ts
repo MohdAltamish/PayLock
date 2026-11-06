@@ -269,6 +269,10 @@ describe("state machine: verifier outcomes", () => {
   });
   it("needsHumanReview -> NEEDS_REVIEW", () =>
     expect(decided("PASS", 100, true)).toBe("NEEDS_REVIEW"));
+  it("a FAIL that needs human review -> NEEDS_REVIEW, not a void", () =>
+    expect(decided("FAIL", 40, true)).toBe("NEEDS_REVIEW"));
+  it("an overridden deal that FAILs is voided (override only gates release)", () =>
+    expect(decided("FAIL", 40, false, ctx({ requiresHumanRelease: true }))).toBe("VERIFYING"));
   it("an overridden deal (requiresHumanRelease) -> NEEDS_REVIEW", () =>
     expect(decided("PASS", 100, false, ctx({ requiresHumanRelease: true }))).toBe("NEEDS_REVIEW"));
   it("review routing does not need an authorization check (no money moves)", () =>

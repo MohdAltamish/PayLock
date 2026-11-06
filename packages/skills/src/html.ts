@@ -8,6 +8,8 @@ export interface HtmlFacts {
   hasForm: boolean;
   formFields: number;
   headings: string[];
+  images: number;
+  imageAlts: string[];
   textExcerpt: string;
 }
 
@@ -42,6 +44,12 @@ export function htmlFacts(html: string, excerptChars = 4000): HtmlFacts {
     )
     .filter(Boolean)
     .slice(0, 20);
+  const imgs = [...body.matchAll(/<img\b[^>]*>/gi)].map((m) => m[0]);
+  const imageAlts = imgs
+    .map((t) => /alt\s*=\s*["']([^"']*)["']/i.exec(t)?.[1]?.trim() ?? "")
+    .filter(Boolean)
+    .map(decode)
+    .slice(0, 20);
   const text = decode(body.replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
@@ -51,6 +59,8 @@ export function htmlFacts(html: string, excerptChars = 4000): HtmlFacts {
     hasForm: forms.length > 0,
     formFields,
     headings,
+    images: imgs.length,
+    imageAlts,
     textExcerpt: text.slice(0, excerptChars),
   };
 }

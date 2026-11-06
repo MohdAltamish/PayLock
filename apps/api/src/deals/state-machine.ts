@@ -166,11 +166,13 @@ export function transition(from: DealState, event: DealEvent, ctx: DealContext):
       const passes =
         event.outcome === "PASS" ||
         (event.outcome === "PARTIAL" && event.score >= event.partialPayMin);
+      // Low confidence or a human criterion goes to a person whatever the outcome.
+      if (event.needsHumanReview) return { to: "NEEDS_REVIEW" };
       if (!passes) {
         // FAIL is decided here; the deal is voided by settlement (settlement.voided).
         return { to: "VERIFYING" };
       }
-      if (event.needsHumanReview || ctx.requiresHumanRelease) return { to: "NEEDS_REVIEW" };
+      if (ctx.requiresHumanRelease) return { to: "NEEDS_REVIEW" };
       if (!ctx.hasDecision) fail("release requires a persisted Decision");
       if (!ctx.hasPaypalAuth || !ctx.authValid)
         fail("release requires a valid, unexpired authorization");

@@ -6,6 +6,7 @@ import {
   riskLevel,
   type Signal,
 } from "@paylock/schemas";
+import { summarize } from "./guardian/index.js";
 import { ruleSignals, sumScore } from "./guardian/rules.js";
 import type { Agents, GuardInput, NegotiateInput, VerifyInput } from "./types.js";
 
@@ -54,7 +55,8 @@ export class StubAgents implements Agents {
       score,
       level,
       signals,
-      summary: `Stub risk check: ${signals.length} signal(s), score ${score}. Risk: ${level}.`,
+      // Same wording as the real Guardian so the UI and e2e tests see one format.
+      summary: summarize(level, signals),
       recommendedAction: recommendedAction(level),
     });
     return { risk, fallback: false, modelMeta: { mode: "stub" as const } };
