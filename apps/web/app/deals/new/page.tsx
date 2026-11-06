@@ -4,6 +4,7 @@ import { DEMO_PRESETS } from "@paylock/schemas";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ErrorNote, Shell } from "@/components/ui";
+import { Stepper } from "@/components/deal/Stepper";
 import { Button } from "@/components/primitives/Button";
 import { Card } from "@/components/primitives/Card";
 import { Field, Select, Textarea } from "@/components/primitives/Field";
@@ -21,6 +22,7 @@ export default function NewDeal() {
   const [sellers, setSellers] = useState<DemoUser[]>([]);
   const [sellerId, setSellerId] = useState("");
   const [request, setRequest] = useState("");
+  const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,15 +53,28 @@ export default function NewDeal() {
     }
   };
 
+  const validationError =
+    touched && request.length > 0 && request.length < 10
+      ? "Please describe the task in at least 10 characters."
+      : null;
+
   return (
     <Shell>
-      <div className="max-w-2xl mx-auto space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">New deal</h1>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Stepper currentStep={1} />
+
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-text">New deal</h1>
+          <p className="text-xs sm:text-sm text-muted">
+            Step 1: Describe the requirements and budget. Paylock AI will structure the contract.
+          </p>
+        </div>
+
         <Card>
           <form className="space-y-5" onSubmit={submit}>
             <div>
-              <p className="text-xs font-medium text-muted uppercase tracking-wider mb-2">
-                Demo presets (recorded, so they always give the same result):
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+                Demo presets:
               </p>
               <div className="flex flex-wrap gap-2">
                 {DEMO_PRESETS.map((p) => (
@@ -91,29 +106,44 @@ export default function NewDeal() {
               </Select>
             </Field>
 
-            <Field id="request-textarea" label="What do you need done? Include your budget in USD.">
+            <Field
+              id="request-textarea"
+              label="What do you need done? Include your budget in USD."
+              error={validationError}
+            >
               <Textarea
                 id="request-textarea"
                 value={request}
                 onChange={(e) => setRequest(e.target.value)}
+                onBlur={() => setTouched(true)}
                 required
                 minLength={10}
                 maxLength={4000}
                 data-testid="request"
                 rows={5}
+                placeholder="e.g. Build an authentication flow with OAuth2 for $400 USD..."
               />
+              <div className="flex justify-end mt-1">
+                <span className="text-[11px] text-muted tabular-nums">
+                  {request.length} / 4000 characters
+                </span>
+              </div>
             </Field>
 
             <ErrorNote error={error} />
 
-            <Button
-              type="submit"
-              disabled={busy || !sellerId || request.length < 10}
-              loading={busy}
-              data-testid="create-deal"
-            >
-              {busy ? "Paylock AI is drafting the contract…" : "Draft the contract"}
-            </Button>
+            {/* CTA sticks to the bottom on mobile */}
+            <div className="pt-2 sticky bottom-4 sm:static z-10 bg-surface/90 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-2 sm:p-0 rounded-control border sm:border-0 border-border/80 sm:shadow-none shadow-lg">
+              <Button
+                type="submit"
+                disabled={busy || !sellerId || request.length < 10}
+                loading={busy}
+                data-testid="create-deal"
+                className="w-full sm:w-auto"
+              >
+                {busy ? "Paylock AI is drafting the contract…" : "Draft the contract"}
+              </Button>
+            </div>
           </form>
         </Card>
       </div>

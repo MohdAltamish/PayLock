@@ -15,7 +15,9 @@ import { DealHeader } from "@/components/deal/DealHeader";
 import { DeliverForm } from "@/components/deal/DeliverForm";
 import { ReviewCard } from "@/components/deal/ReviewCard";
 import { SettlementError } from "@/components/deal/SettlementError";
+import { Stepper } from "@/components/deal/Stepper";
 import { api, type DealView } from "@/lib/api";
+import { getDealStep } from "@/lib/wizard";
 
 export default function DealPage() {
   const { id } = useParams<{ id: string }>();
@@ -106,10 +108,17 @@ export default function DealPage() {
   const isBuyer = me?.id === deal.buyer.id;
   const isSeller = me?.id === deal.seller.id;
   const decision = deal.decisions[0];
+  const currentStep = getDealStep(deal.state);
 
   return (
     <Shell>
       <DealHeader deal={deal} />
+
+      {currentStep && (
+        <div className="mb-6">
+          <Stepper currentStep={currentStep} />
+        </div>
+      )}
 
       <ErrorNote error={error} />
       {note && (

@@ -106,17 +106,76 @@ export function BuyerActions({
         </form>
       </Dialog>
 
-      {/* CONTRACTED state */}
+      {/* CONTRACTED state: Review the contract */}
       {deal.state === "CONTRACTED" && (
         <Card className="p-4 sm:p-5 space-y-4">
           <CardHeader className="mb-2">
-            <CardTitle>Next step: Risk check</CardTitle>
+            <CardTitle>Review the contract</CardTitle>
           </CardHeader>
-          <p className="text-sm text-muted">
-            Review the contract in the sidebar, then let Paylock AI analyze the deal for
-            counterparty and payment risk signals before funding.
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+
+          {deal.contract && (
+            <div className="space-y-3 text-xs">
+              <p className="text-text font-medium leading-relaxed bg-slate-50 p-3 rounded-control border border-border">
+                {deal.contract.scope}
+              </p>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-muted uppercase tracking-wider text-[11px]">
+                  Acceptance Criteria ({deal.contract.criteria.length})
+                </p>
+                <div className="space-y-2">
+                  {deal.contract.criteria.map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-2.5 rounded-control border border-border bg-surface flex items-start justify-between gap-3"
+                    >
+                      <div className="space-y-1 flex-1">
+                        <p className="text-text font-medium leading-snug">{c.description}</p>
+                        <div className="flex items-center gap-2 text-muted text-[11px]">
+                          <span>Weight: {c.weight}</span>
+                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-accent rounded-full"
+                              style={{ width: `${Math.min(100, c.weight * 20)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                        Checked by {c.verifiable === "llm" ? "AI" : c.verifiable}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {deal.contract.ambiguities.length > 0 && (
+                <div className="space-y-1 pt-1">
+                  <p className="font-semibold text-warning-text text-[11px]">Ambiguities flagged</p>
+                  {deal.contract.ambiguities.map((a, i) => (
+                    <p
+                      key={i}
+                      className="text-amber-900 bg-amber-50 p-2 rounded-control border border-amber-200"
+                    >
+                      {a}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between text-[11px] text-muted pt-2 border-t border-border/60">
+                <span>Partial payment minimum: {deal.contract.partialPayMin}%</span>
+                <span>
+                  Deadline:{" "}
+                  {deal.contract.deadline
+                    ? new Date(deal.contract.deadline).toLocaleDateString()
+                    : "Not set"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/60">
             <Button
               onClick={() => act("guard", () => post(`/deals/${id}/guard`))}
               loading={busy === "guard"}
