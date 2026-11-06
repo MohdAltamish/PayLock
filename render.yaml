@@ -51,17 +51,15 @@ services:
       - key: PAYPAL_ENV
         value: sandbox
       - key: PAYPAL_CLIENT_ID
-        sync: false
+        value: "BAAbrGs0wmQezJC6FSXUv5PQKa8QbEuMYF7o4yOoNK-xobZxjfYgvoqpuj_2jWcl1BgbDzBMrNItwZFMR4"
       - key: PAYPAL_CLIENT_SECRET
-        sync: false
-      # Printed by `npm run webhook:register -- https://<api>.onrender.com/webhooks/paypal`.
+        value: "ENO8jMoOlncKKNRD2mKpKtuJe4x_FA9XItfvdyMs4LMd4644t2peE5ZO8QA_gBFC_bqZf656A_5X68b9"
       - key: PAYPAL_WEBHOOK_ID
-        sync: false
+        value: "6CK65828D0701523J"
       - key: PAYPAL_PLATFORM_EMAIL
-        sync: false
-      # Payout receiver for the demo personas (read by the seed).
+        value: "admin@paylock.example.com"
       - key: PAYPAL_SANDBOX_SELLER_EMAIL
-        sync: false
+        value: "seller-paylock@personal.example.com"
       - key: AUTH_SAFE_WINDOW_HOURS
         value: "72"
       # Public origins. Change both if Render assigns different subdomains.
