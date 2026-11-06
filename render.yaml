@@ -1,7 +1,12 @@
 # Render Blueprint for Paylock (BUILD_PLAN Task 21, INSTRUCTIONS section 8).
-# API on Starter (paid: needed for preDeployCommand and the shell), web and
-# Postgres on free plans. Free Postgres expires 30 days after creation; upgrade
-# it before submission or follow the re-create procedure in INSTRUCTIONS 8.
+# All services on free tier for testing. Free Postgres expires 30 days after
+# creation; upgrade before then or follow the re-create procedure in INSTRUCTIONS 8.
+#
+# Free tier limitations:
+# - No preDeployCommand: migrations must be run via build script
+# - No initialDeployHook: seed runs via build script on every deploy
+# - No shell access
+# - Spins down after inactivity (cold starts)
 #
 # All commands run from the repo root so npm workspaces resolve. NODE_ENV is
 # production at build time, so `npm ci` needs --include=dev (prisma, tsup,
@@ -23,13 +28,12 @@ services:
   - type: web
     name: paylock-api
     runtime: node
-    plan: starter
+    plan: free
     region: oregon
     branch: main
-    buildCommand: npm ci --include=dev && npm run build -w apps/api
-    preDeployCommand: npm run db:deploy -w apps/api
-    # Seeds the demo buyer, personas and policy once (upserts, safe to re-run from the shell).
-    initialDeployHook: npm run seed -w apps/api
+    # Build includes migrations and seed for free tier (no preDeployCommand available)
+    # Seed is idempotent (upserts), safe to run on every build
+    buildCommand: npm ci --include=dev && npm run build -w apps/api && npm run db:deploy -w apps/api && npm run seed -w apps/api
     # Started from the repo root (not -w) so fixtures/replay resolves against the root.
     startCommand: node apps/api/dist/server.js
     healthCheckPath: /healthz
