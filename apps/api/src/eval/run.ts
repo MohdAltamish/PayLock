@@ -304,3 +304,16 @@ void main().catch((err) => {
   console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 });
+
+describe("demo path fixtures (hosted demo stability)", () => {
+  for (const d of DEMO_PRESETS) {
+    it(`${d.key} uses a seeded persona and request so the fixture key is stable`, () => {
+      const persona = PERSONAS.find((p) => p.key === d.personaKey)!;
+      expect(persona).toBeDefined();
+      // DEMO_PRESETS.request and PERSONAS.openingMessage are the exact text
+      // the real agents receive; any change invalidates the fixtures.
+      expect(d.request.length).toBeGreaterThan(10);
+      if (persona.openingMessage) expect(persona.openingMessage.length).toBeGreaterThan(10);
+    });
+  }
+});
