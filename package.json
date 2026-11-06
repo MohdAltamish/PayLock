@@ -38,6 +38,7 @@
     "void-all": "tsx --env-file=.env scripts/void-all.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "9.39.5",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@types/node": "20.19.43",

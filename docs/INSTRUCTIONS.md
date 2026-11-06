@@ -3,6 +3,7 @@
 ## Prerequisites
 - Node.js 20+, npm 10+
 - Docker (for local Postgres 16 and local-only `run_checks`)
+- `jq` (for `scripts/curl-happy.sh` E2E verification)
 - PayPal Developer account with:
   - a **US** sandbox business account (the platform: receives captures, sends payouts) with a sandbox REST app assigned to it
   - on that app: **Payouts** and **Transaction Search** enabled (Apps & Credentials → app → Features)

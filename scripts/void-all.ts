@@ -9,17 +9,30 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { loadConfig } from "../apps/api/src/config/env.js";
-import { createPayPalAdapter } from "../apps/api/src/paypal/adapter.js";
+import { PayPalAdapter } from "../apps/api/src/paypal/adapter.js";
+import { PayPalHttp } from "../apps/api/src/paypal/http.js";
+import { TokenProvider } from "../apps/api/src/paypal/token.js";
 
 const prisma = new PrismaClient();
 
 async function main() {
   const config = loadConfig();
-  const adapter = createPayPalAdapter({
+  const tokens = new TokenProvider({
     baseUrl: config.paypal.baseUrl,
     clientId: config.paypal.clientId,
     clientSecret: config.paypal.clientSecret,
   });
+  const http = new PayPalHttp({
+    baseUrl: config.paypal.baseUrl,
+    tokens,
+    log: {
+      info: () => { },
+      warn: (o, m) => console.warn(m, o),
+      error: (o, m) => console.error(m, o),
+      debug: () => { },
+    },
+  });
+  const adapter = new PayPalAdapter(http, { isFrozen: () => false });
 
   const dryRun = process.argv.includes("--dry-run");
 
@@ -31,7 +44,7 @@ async function main() {
     },
     include: {
       payments: {
-        where: { kind: "authorize", paypalId: { not: null } },
+        where: { kind: "AUTHORIZE", paypalId: { not: null } },
         orderBy: { createdAt: "desc" },
         take: 1,
       },
@@ -70,7 +83,14 @@ async function main() {
           data: { state: "VOIDED", blockReason: "DEADLINE_PASSED" },
         });
         await tx.dealEvent.create({
-          data: { dealId: d.id, type: "settlement.voided", data: { reason: "DEADLINE_PASSED" } },
+          data: {
+            dealId: d.id,
+            type: "settlement.voided",
+            fromState: "LOCKED",
+            toState: "VOIDED",
+            actor: "SYSTEM",
+            payload: { reason: "DEADLINE_PASSED" },
+          },
         });
       });
 

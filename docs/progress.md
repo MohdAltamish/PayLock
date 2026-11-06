@@ -31,10 +31,18 @@ Times are focused work in UTC. Budgets and cut triggers are in BUILD_PLAN.md sec
 
 **Phase 2 total: about 2h of focused work (9h budget).** No cuts applied.
 
-Sandbox evidence (curl-happy.sh, 2026-11-05 16:11 UTC):
+**Sandbox evidence (curl-happy.sh, 2026-11-05 16:11 UTC):**
 
 - PASS: order `4YS46936GF694262N`, authorization `90311013EM075042D`, capture `450956632J3278548` (COMPLETED, confirmed by GET), payout batch `GDK9ME9TX273N` (SUCCESS after ~20 s of polling), 2.00 USD -> RELEASED.
 - FAIL: order `9AA39341D7728353J`, authorization `7GR29215KV4140849` voided (200) -> VOIDED / VERIFICATION_FAILED.
+
+**Fresh-clone evidence (node:20 container, 2026-11-06 11:05 UTC):**
+
+- Real PayPal sandbox (debug_ids: ca5639ed0ac19, ca5639ee69eb5, ca5639f74ad9f, ca5639f8c38c1, etc.)
+- PASS path -> RELEASED (authorization 42H05000GY436442P, capture 15P238334N3434908, payout FFFH5EFJ4DCLE)
+- FAIL path -> VOIDED (authorization 64V99660UN339613K)
+- All E2E tests use `E2E_FUNDING=card` server-side test route against the real sandbox
+- In-memory PayPalSim is only used in unit tests labeled "mocked PayPal"
 
 ## Phase 3: Agents (budget 9h, cut trigger 11.25h)
 

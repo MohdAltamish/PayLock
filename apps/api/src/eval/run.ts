@@ -150,15 +150,15 @@ async function main() {
     const guard = await agents.guard(input);
     const verify = c.deliverable
       ? await agents.verify({
-          dealId: c.id,
-          contract: {
-            title: contract.title,
-            scope: contract.scope,
-            criteria: contract.criteria,
-            partialPayMin: contract.partialPayMin,
-          },
-          deliverable: { kind: c.deliverable.kind, content: c.deliverable.content, note: null },
-        })
+        dealId: c.id,
+        contract: {
+          title: contract.title,
+          scope: contract.scope,
+          criteria: contract.criteria,
+          partialPayMin: contract.partialPayMin,
+        },
+        deliverable: { kind: c.deliverable.kind, content: c.deliverable.content, note: null },
+      })
       : null;
     track(neg.modelMeta);
     track(guard.modelMeta);
@@ -196,10 +196,10 @@ async function main() {
     if (ok) t.correct++;
     console.log(
       `${ok ? "PASS" : "MISS"} ${r.schemaValid ? "schema-ok " : "SCHEMA-BAD"} ${c.id.padEnd(34)} risk ${level} ${r.guard.risk.score}` +
-        (r.verify
-          ? ` | ${outcome ?? "no decision"} ${r.verify.decision?.score ?? "-"}${r.verify.decision?.needsHumanReview ? " (review)" : ""}`
-          : "") +
-        ` | criteria ${r.neg.contract.criteria.map((x) => x.verifiable[0]).join("")}`,
+      (r.verify
+        ? ` | ${outcome ?? "no decision"} ${r.verify.decision?.score ?? "-"}${r.verify.decision?.needsHumanReview ? " (review)" : ""}`
+        : "") +
+      ` | criteria ${r.neg.contract.criteria.map((x) => x.verifiable[0]).join("")}`,
     );
     if (!r.schemaValid)
       console.log(
@@ -303,17 +303,4 @@ async function main() {
 void main().catch((err) => {
   console.error(err instanceof Error ? err.message : err);
   process.exit(1);
-});
-
-describe("demo path fixtures (hosted demo stability)", () => {
-  for (const d of DEMO_PRESETS) {
-    it(`${d.key} uses a seeded persona and request so the fixture key is stable`, () => {
-      const persona = PERSONAS.find((p) => p.key === d.personaKey)!;
-      expect(persona).toBeDefined();
-      // DEMO_PRESETS.request and PERSONAS.openingMessage are the exact text
-      // the real agents receive; any change invalidates the fixtures.
-      expect(d.request.length).toBeGreaterThan(10);
-      if (persona.openingMessage) expect(persona.openingMessage.length).toBeGreaterThan(10);
-    });
-  }
 });

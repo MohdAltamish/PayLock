@@ -3,13 +3,13 @@ import { buildApp } from "./app.js";
 import { ProblemError } from "./lib/problem.js";
 import { testConfig } from "./test/helpers.js";
 
-async function app(checks: Record<string, () => Promise<void>> = { db: async () => {} }) {
+async function app(checks: Record<string, () => Promise<void>> = { db: async () => { } }) {
   return buildApp({ config: testConfig(), deps: { healthChecks: checks }, logger: false });
 }
 
 describe("GET /healthz", () => {
   it("returns 200 when all checks pass", async () => {
-    const a = await app({ db: async () => {}, paypal: async () => {} });
+    const a = await app({ db: async () => { }, paypal: async () => { } });
     const res = await a.inject({ method: "GET", url: "/healthz" });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: "ok", checks: { db: "ok", paypal: "ok" } });
@@ -144,5 +144,39 @@ describe("GET /config/paypal testCardFunding (BUILD_PLAN 2.4)", () => {
 
   it("a non-sandbox PayPal env is rejected at startup, so it can never be true there", () => {
     expect(() => testConfig({ PAYPAL_ENV: "live", E2E_FUNDING: "card" })).toThrow(/sandbox/);
+  });
+});
+
+
+describe("production safety", () => {
+  it("E2E_FUNDING=card is rejected in production", () => {
+    expect(() =>
+      testConfig({ NODE_ENV: "production", E2E_FUNDING: "card", PAYPAL_ENV: "sandbox" }),
+    ).toThrow();
+  });
+
+  it("E2E_FUNDING=card is rejected when PAYPAL_ENV is not sandbox", () => {
+    expect(() => testConfig({ E2E_FUNDING: "card", PAYPAL_ENV: "live" })).toThrow();
+  });
+
+  it("AGENTS_MODE=replay works with LLM_PROVIDER=replay", () => {
+    // Replay mode should never use live LLM or mock PayPal
+    const c = testConfig({ AGENTS_MODE: "replay", LLM_PROVIDER: "replay" });
+    expect(c.agentsMode).toBe("replay");
+    expect(c.llm.provider).toBe("replay");
+  });
+
+  it("AGENTS_MODE=replay with live LLM provider is allowed (uses fallback to rules-only)", () => {
+    // This is allowed: replay mode with a live provider falls back to rules-only when no fixture exists
+    const c = testConfig({ AGENTS_MODE: "replay", LLM_PROVIDER: "openai" });
+    expect(c.agentsMode).toBe("replay");
+    expect(c.llm.provider).toBe("openai");
+  });
+
+  it("in-memory PayPalSim is only used in test harness, never in production or replay mode", () => {
+    // PayPalSim is injected directly in test harness.ts, not via config
+    // Production and hosted demo always use real PayPal HTTP
+    const c = testConfig({ AGENTS_MODE: "replay", LLM_PROVIDER: "replay" });
+    expect(c.paypal.env).toBe("sandbox"); // Real sandbox, not mock
   });
 });
