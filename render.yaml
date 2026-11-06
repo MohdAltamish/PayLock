@@ -79,11 +79,11 @@ services:
       - key: LLM_PROVIDER
         value: openai
       - key: LLM_BASE_URL
-        value: https://openrouter.ai/api/v1
+        value: https://generativelanguage.googleapis.com/v1beta/openai
       - key: LLM_MODEL
-        value: nvidia/nemotron-3.5-lightning:free
+        value: gemini-2.5-flash-preview-05-20
       - key: LLM_JSON_MODE
-        value: json_object
+        value: json_schema
       # Only used when LLM_REPLAY_FALLBACK=live.
       - key: LLM_API_KEY
         sync: false
