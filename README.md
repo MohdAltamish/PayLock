@@ -30,7 +30,13 @@ Freelancers get stiffed. Buyers get scammed. Payments and trust live in differen
 - Render (hosting)
 
 ## Built with the PayPal AI Toolkit
-Development used the [PayPal AI Toolkit](https://github.com/paypal/AI-Toolkit) (Apache-2.0) for best-practices guidance. The toolkit is referenced, not vendored; no toolkit files are copied into this repo. Commands used: (updated in Phase 6 to list only the commands actually used).
+Development used the [PayPal AI Toolkit](https://github.com/paypal/AI-Toolkit) (Apache-2.0) for best-practices guidance. The toolkit is referenced, not vendored; no toolkit files are copied into this repo.
+
+**Toolkit commands used during development:**
+- `/paypal:doctor` — validated the PayPal adapter against best practices
+- `/paypal:doctor security` — security review of token handling, webhook verification, and secrets management
+
+The hosted demo runs all agents from **recorded fixtures** (no live LLM calls). Each agent decision was recorded during development and replayed on demand, so the demo is stable, deterministic, and costs nothing to run.
 
 ## Quick start
 

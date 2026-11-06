@@ -54,3 +54,29 @@ Status (2026-11-06): code, unit tests (643) and lint pass. `npm run eval` (repla
 | E2E fixes and 3 green runs | 14:48 | 15:10 | `/config/paypal` now returns `testCardFunding`; stub Guardian uses the shared summary wording |
 
 E2E evidence (2026-11-06, stub agents, real sandbox, card funding): happy, scam and fail paths passed 3 runs in a row. Not yet done: an E2E run with `E2E_AGENTS=replay` (needs the eval fixtures) and the manual `npm run e2e:popup` run.
+
+## Phase 6: Harden (budget 7h, cut trigger 8.75h)
+
+| Task | Start | End | Notes |
+|---|---|---|---|
+| Task 22 (partial) | 16:11 | 16:20 | Void-all script, lint fix |
+| Task 23 CI workflow | 16:08 | 16:11 | Created CI with lint, typecheck, test, build, gitleaks, eval |
+
+**Phase 6 status (2026-11-06 16:20 UTC):**
+- ✅ CI workflow created and committed
+- ✅ Void-all.ts script created and added to package.json
+- ✅ README toolkit section updated with commands used
+- ✅ Error and empty states in UI (verified)
+- ✅ Accessibility attributes (aria-live, role, aria-busy)
+- ✅ Timeout handling in LLM client
+- ✅ Freeze tests exist and pass
+- ✅ Idempotency tests exist and pass
+- ✅ SSE proxy test exists
+- ✅ All 650 unit tests pass
+- ✅ Lint and typecheck pass
+
+**Remaining:**
+- ⏳ Fresh-clone test in node:20 container (documented in INSTRUCTIONS.md)
+- ⏳ Accessibility pass with axe (optional, not required for demo)
+- ⏳ Eval recording (blocked on OpenRouter quota reset at 00:00 UTC)
+

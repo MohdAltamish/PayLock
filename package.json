@@ -34,7 +34,8 @@
     "demo:reset": "tsx --env-file=.env apps/api/src/db/seed.ts --reset",
     "llm:probe": "tsx --env-file=.env scripts/llm-probe.ts",
     "eval": "tsx apps/api/src/eval/run.ts",
-    "eval:record": "tsx --env-file=.env apps/api/src/eval/run.ts --record"
+    "eval:record": "tsx --env-file=.env apps/api/src/eval/run.ts --record",
+    "void-all": "tsx --env-file=.env scripts/void-all.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
