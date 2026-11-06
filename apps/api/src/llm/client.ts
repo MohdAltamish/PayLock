@@ -41,7 +41,9 @@ export function createLlm(
           timeoutMs: config.llm.timeoutMs,
         });
   return new RedactingProvider(
-    config.llm.record ? new RecordingProvider(live, replayDir) : live,
+    // Recording spends the shared daily quota: no schema retry; invalid replies
+    // are dropped from the fixtures so a re-run re-records only those.
+    config.llm.record ? new RecordingProvider(live, replayDir, { schemaRetry: false }) : live,
     onStats,
   );
 }

@@ -4,7 +4,8 @@ import type { LlmProvider, LlmResponse } from "./types.js";
 /**
  * Structured output (invariant 5). The schema is sent to the provider as JSON
  * Schema, the reply is parsed and validated with Zod, and an invalid reply
- * gets exactly one retry with the validation error appended. A second failure
+ * gets exactly one retry with the validation error appended (none when the
+ * provider sets schemaAttempts = 1, as the fixture recorder does). A final failure
  * returns `ok: false` so the caller can fail safe (rules fallback or
  * NEEDS_REVIEW). Free text is never parsed for decisions.
  */
@@ -67,11 +68,58 @@ function strictify(node: unknown): Record<string, unknown> {
 }
 
 export function extractJson(text: string): unknown {
+  const r = extractJsonWithInfo(text);
+  if (!r.ok) throw new SyntaxError("reply was not valid JSON");
+  return r.value;
+}
+
+export type ExtractedJson =
+  { ok: true; value: unknown; prose: boolean; proseChars: number } | { ok: false };
+
+/**
+ * The whole reply (optionally in a ``` fence) must be JSON. If it is not,
+ * some models wrap the object in prose; then the first balanced top-level
+ * JSON object is taken. Nothing outside that object is ever used, and the
+ * object still has to pass the Zod schema.
+ */
+export function extractJsonWithInfo(text: string): ExtractedJson {
   const t = text
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "");
-  return JSON.parse(t);
+  try {
+    return { ok: true, value: JSON.parse(t), prose: false, proseChars: 0 };
+  } catch {
+    // fall through to the first-object scan
+  }
+  const span = firstJsonObject(t);
+  if (!span) return { ok: false };
+  try {
+    const value = JSON.parse(t.slice(span.start, span.end));
+    return { ok: true, value, prose: true, proseChars: t.length - (span.end - span.start) };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/** Start/end of the first balanced `{...}` in `s`, skipping braces inside JSON strings. */
+function firstJsonObject(s: string): { start: number; end: number } | null {
+  const start = s.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) return { start, end: i + 1 };
+  }
+  return null;
 }
 
 export async function structured<T>(
@@ -86,7 +134,8 @@ export async function structured<T>(
   let outTok = 0;
   let lastError = "";
   let user = req.user;
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  const maxAttempts = provider.schemaAttempts ?? 2;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const res: LlmResponse = await provider.complete({
       name: req.name,
       system: req.system,
@@ -124,7 +173,10 @@ export async function structured<T>(
         .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
         .join("; ");
     }
-    if (attempt === 2) return { ok: false, error: lastError, attempts: attempt, meta: meta(false) };
+    // Keep invalid replies out of the replay fixtures (a re-record calls only these again).
+    if (res.fixture) provider.discard?.(res.fixture);
+    if (attempt === maxAttempts)
+      return { ok: false, error: lastError, attempts: attempt, meta: meta(false) };
     user = `${req.user}\n\nYour previous reply was invalid: ${lastError}. Reply again with JSON that matches the schema exactly.`;
   }
   throw new Error("unreachable");

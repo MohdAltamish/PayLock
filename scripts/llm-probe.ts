@@ -10,6 +10,7 @@
  *   npm run llm:probe
  */
 import { z } from "zod";
+import { extractJsonWithInfo } from "../apps/api/src/llm/structured.js";
 
 const base = process.env.LLM_BASE_URL?.replace(/\/+$/, "");
 const key = process.env.LLM_API_KEY;
@@ -71,23 +72,27 @@ async function call(mode: "json_schema" | "json_object") {
       note: `HTTP ${res.status} ${body.error?.message?.slice(0, 120) ?? ""}`,
     };
   const text: string = body?.choices?.[0]?.message?.content ?? "";
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-  } catch {
-    return { ok: false, ms, note: "not JSON" };
-  }
-  const r = Shape.safeParse(parsed);
+  // Same extraction the app uses (llm/structured.ts); reports prose but never prints it.
+  const extracted = extractJsonWithInfo(text);
+  if (!extracted.ok) return { ok: false, ms, note: `not JSON (${text.length} chars)` };
+  const prose = extracted.prose ? ` prose around JSON (${extracted.proseChars} chars)` : "";
+  const r = Shape.safeParse(extracted.value);
   return {
     ok: r.success,
     ms,
-    note: r.success ? "matches schema" : `schema violation: ${r.error.issues[0]?.message}`,
+    note:
+      (r.success ? "matches schema" : `schema violation: ${r.error.issues[0]?.message}`) + prose,
   };
 }
 
+// --runs N: calls per mode (default 3). Use --runs 1 when the daily quota is tight.
+const runsArg = process.argv.indexOf("--runs");
+const runs =
+  runsArg > 0 ? Math.max(1, Math.min(5, Math.trunc(Number(process.argv[runsArg + 1])) || 1)) : 3;
+
 for (const mode of ["json_schema", "json_object"] as const) {
   const results = [];
-  for (let i = 0; i < 3; i++) results.push(await call(mode));
+  for (let i = 0; i < runs; i++) results.push(await call(mode));
   const honored = results.every((r) => r.ok);
   console.log(`${mode}: ${honored ? "HONORED" : "NOT HONORED"}`);
   for (const r of results) console.log(`  ${r.ok ? "ok " : "bad"} ${r.ms}ms ${r.note}`);

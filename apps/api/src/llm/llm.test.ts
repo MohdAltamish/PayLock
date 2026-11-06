@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,7 +7,7 @@ import { AnthropicProvider } from "./anthropic.js";
 import { OpenAiProvider } from "./openai.js";
 import { RedactingProvider, Redactor } from "./redaction.js";
 import { RecordingProvider, ReplayMissError, ReplayProvider } from "./replay.js";
-import { jsonSchemaFor, structured } from "./structured.js";
+import { extractJsonWithInfo, jsonSchemaFor, structured } from "./structured.js";
 import type { LlmProvider, LlmRequest, LlmResponse } from "./types.js";
 
 class Spy implements LlmProvider {
@@ -52,6 +52,30 @@ describe("structured()", () => {
     expect(r.ok).toBe(false);
     expect(r.attempts).toBe(2);
     expect(spy.seen).toHaveLength(2);
+  });
+
+  it("takes the first JSON object out of surrounding prose, then still validates it", async () => {
+    const reply =
+      'Sure! Here is the grade: {"verdict":"PASS","note":"has {braces} and \\"quotes\\""} Hope that helps. {"verdict":"FAIL","note":"second"}';
+    const r = await structured(new Spy([reply]), req());
+    expect(r).toMatchObject({ ok: true, attempts: 1, value: { verdict: "PASS" } });
+    expect(extractJsonWithInfo(reply)).toMatchObject({ ok: true, prose: true });
+    expect(extractJsonWithInfo('{"a":1}')).toMatchObject({ ok: true, prose: false });
+    // Prose with a schema-invalid object is still rejected by Zod.
+    const bad = await structured(
+      new Spy(['Result: {"verdict":"MAYBE","note":"x"}', "no json here"]),
+      req(),
+    );
+    expect(bad.ok).toBe(false);
+  });
+
+  it("schemaAttempts = 1 disables the retry", async () => {
+    const spy = Object.assign(new Spy(['{"verdict":"MAYBE","note":"?"}', "unused"]), {
+      schemaAttempts: 1 as const,
+    });
+    const r = await structured(spy, req());
+    expect(r).toMatchObject({ ok: false, attempts: 1 });
+    expect(spy.seen).toHaveLength(1);
   });
 
   it("accepts fenced JSON", async () => {
@@ -136,6 +160,28 @@ describe("replay provider", () => {
     await expect(
       new ReplayProvider(dir).complete({ ...req(), user: "other", jsonSchema: {} } as any),
     ).rejects.toBeInstanceOf(ReplayMissError);
+  });
+
+  it("recording: no schema retry; an invalid reply is moved out and re-recorded on the next run", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "replay-"));
+    const rejectedDir = mkdtempSync(path.join(tmpdir(), "rejected-"));
+    const live = new Spy(['{"verdict":"MAYBE","note":"bad"}', '{"verdict":"PASS","note":"good"}']);
+    const provider = () =>
+      new RedactingProvider(new RecordingProvider(live, dir, { schemaRetry: false, rejectedDir }));
+    const first = await structured(provider(), req());
+    expect(first).toMatchObject({ ok: false, attempts: 1 });
+    expect(live.seen).toHaveLength(1);
+    const key = first.meta.fixtures[0]!.split("/")[1]!;
+    expect(existsSync(path.join(dir, "probe", `${key}.json`))).toBe(false);
+    expect(existsSync(path.join(rejectedDir, "probe", `${key}.json`))).toBe(true);
+    // Second run calls the LLM again for that prompt and keeps the valid reply.
+    const second = await structured(provider(), req());
+    expect(second).toMatchObject({ ok: true, value: { verdict: "PASS" } });
+    expect(live.seen).toHaveLength(2);
+    expect(existsSync(path.join(dir, "probe", `${key}.json`))).toBe(true);
+    // A third run reuses the fixture (no call).
+    await structured(provider(), req());
+    expect(live.seen).toHaveLength(2);
   });
 });
 

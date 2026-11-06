@@ -27,7 +27,14 @@ export interface LlmResponse {
 
 export interface LlmProvider {
   readonly kind: string;
+  /**
+   * Structured attempts per call: 2 (default) allows one retry with the
+   * validation error appended; 1 disables it (fixture recording, to save quota).
+   */
+  readonly schemaAttempts?: 1 | 2;
   complete(req: LlmRequest): Promise<LlmResponse>;
+  /** Called by structured() when a reply failed validation, so a recorder can drop its fixture. */
+  discard?(fixture: string): void;
 }
 
 export class LlmError extends Error {

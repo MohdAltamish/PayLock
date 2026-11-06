@@ -111,3 +111,38 @@ describe("RFC 7807 problems", () => {
     expect(res.json().type).toMatch(/validation-error$/);
   });
 });
+
+describe("GET /config/paypal testCardFunding (BUILD_PLAN 2.4)", () => {
+  const get = async (env: Record<string, string>) => {
+    const a = await buildApp({
+      config: testConfig(env),
+      deps: { healthChecks: {} },
+      logger: false,
+    });
+    const r = await a.inject({ method: "GET", url: "/config/paypal" });
+    await a.close();
+    return r.json() as { clientId: string; env: string; testCardFunding: boolean };
+  };
+
+  it("is true only with sandbox, E2E_FUNDING=card and NODE_ENV != production", async () => {
+    expect((await get({ E2E_FUNDING: "card" })).testCardFunding).toBe(true);
+  });
+
+  it("is false when E2E_FUNDING is off or unset", async () => {
+    expect((await get({ E2E_FUNDING: "off" })).testCardFunding).toBe(false);
+    expect((await get({})).testCardFunding).toBe(false);
+  });
+
+  it("is false in production even with E2E_FUNDING=card", async () => {
+    const body = await get({
+      NODE_ENV: "production",
+      E2E_FUNDING: "card",
+      SESSION_SECRET: "x".repeat(40),
+    });
+    expect(body).toEqual({ clientId: "test-client-id", env: "sandbox", testCardFunding: false });
+  });
+
+  it("a non-sandbox PayPal env is rejected at startup, so it can never be true there", () => {
+    expect(() => testConfig({ PAYPAL_ENV: "live", E2E_FUNDING: "card" })).toThrow(/sandbox/);
+  });
+});

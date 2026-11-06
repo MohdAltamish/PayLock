@@ -26,6 +26,18 @@ import { createLlm } from "../llm/client.js";
 const ROOT = path.resolve(import.meta.dirname, "../../../..");
 const FIX = path.join(ROOT, "fixtures");
 const record = process.argv.includes("--record");
+/**
+ * --group scam|bad|honest|demo runs one group only (recording is done group by
+ * group to fit the free daily quota). No --group runs everything.
+ */
+const GROUPS = { scam: "risky", bad: "bad", honest: "honest", demo: null } as const;
+type Group = keyof typeof GROUPS;
+const groupArg = process.argv.indexOf("--group");
+const group = groupArg > 0 ? (process.argv[groupArg + 1] as Group) : undefined;
+if (group !== undefined && !(group in GROUPS)) {
+  console.error(`--group must be one of: ${Object.keys(GROUPS).join(", ")}`);
+  process.exit(2);
+}
 const DEMO_APP_URL = process.env.APP_URL ?? "http://localhost:3000";
 
 type Seller = CounterpartyProfile;
@@ -160,8 +172,13 @@ async function main() {
 
   let valid = 0;
   let correct = 0;
-  console.log(`Paylock agent eval (${record ? "LIVE, recording" : "replay"})\n`);
-  for (const c of spec.cases) {
+  const kind = group ? GROUPS[group] : undefined;
+  const cases = group ? spec.cases.filter((c) => c.kind === kind) : spec.cases;
+  const tally: Record<string, { n: number; valid: number; correct: number }> = {};
+  console.log(
+    `Paylock agent eval (${record ? "LIVE, recording" : "replay"}${group ? `, group ${group}` : ""})\n`,
+  );
+  for (const c of cases) {
     const r = await runCase(c, spec.sellers[c.seller]!);
     const level = r.guard.risk.level;
     const outcome = r.verify?.decision?.outcome ?? null;
@@ -173,6 +190,10 @@ async function main() {
           : outcome === "FAIL" || outcome === "PARTIAL";
     if (r.schemaValid) valid++;
     if (ok) correct++;
+    const t = (tally[c.kind] ??= { n: 0, valid: 0, correct: 0 });
+    t.n++;
+    if (r.schemaValid) t.valid++;
+    if (ok) t.correct++;
     console.log(
       `${ok ? "PASS" : "MISS"} ${r.schemaValid ? "schema-ok " : "SCHEMA-BAD"} ${c.id.padEnd(34)} risk ${level} ${r.guard.risk.score}` +
         (r.verify
@@ -198,13 +219,23 @@ async function main() {
           );
     }
   }
-  const n = spec.cases.length;
-  console.log(`\nschema-valid ${valid}/${n}, outcome-correct ${correct}/${n}`);
+  const n = cases.length;
+  const label = { risky: "scam", bad: "bad", honest: "honest" } as Record<string, string>;
+  if (n) {
+    console.log("");
+    for (const [k, t] of Object.entries(tally))
+      console.log(
+        `group ${label[k] ?? k}: schema-valid ${t.valid}/${t.n}, outcome-correct ${t.correct}/${t.n}`,
+      );
+    console.log(`all cases: schema-valid ${valid}/${n}, outcome-correct ${correct}/${n}`);
+  }
 
   // Demo paths, as the app runs them (persona profile, opening message, deliverable on APP_URL).
   let demoOk = true;
-  console.log("\nDemo paths");
-  for (const d of DEMO_PRESETS) {
+  let demoRun = 0;
+  let demoPass = 0;
+  if (!group || group === "demo") console.log("\nDemo paths");
+  for (const d of !group || group === "demo" ? DEMO_PRESETS : []) {
     const name = d.key;
     const persona = PERSONAS.find((p) => p.key === d.personaKey)!;
     const r = await runCase(
@@ -229,6 +260,8 @@ async function main() {
           ? level === "LOW" && outcome === "FAIL"
           : level === "HIGH";
     demoOk &&= want && r.schemaValid;
+    demoRun++;
+    if (want && r.schemaValid) demoPass++;
     console.log(
       `${want && r.schemaValid ? "PASS" : "MISS"} ${name.padEnd(12)} risk ${level} ${r.guard.risk.score} | ${outcome ?? "-"} | price ${r.neg.contract.price}`,
     );
@@ -236,9 +269,12 @@ async function main() {
 
   // --prune: delete fixtures this run did not use, so stale prompts do not pile up.
   // Only after a run where every call succeeded; otherwise good fixtures would look unused.
+  if (demoRun) console.log(`group demo: ${demoPass}/${demoRun} paths as expected`);
   const allValid = valid === n && demoOk;
-  if (process.argv.includes("--prune") && !allValid) console.log("not pruning: some calls failed");
-  if (process.argv.includes("--prune") && allValid) {
+  const prune = process.argv.includes("--prune");
+  if (prune && group) console.log("not pruning: --prune needs a full run (no --group)");
+  else if (prune && !allValid) console.log("not pruning: some calls failed");
+  if (prune && !group && allValid) {
     const used = new Set(usedFixtures);
     let removed = 0;
     for (const dir of readdirSync(path.join(FIX, "replay"))) {
@@ -252,9 +288,14 @@ async function main() {
     console.log(`pruned ${removed} unused fixture(s); kept ${used.size}`);
   }
 
-  const pass = valid === n && correct >= n - 1 && demoOk;
+  // The pass threshold applies to the full run; a group run passes when every result is right.
+  const pass = group
+    ? valid === n && correct === n && demoOk
+    : valid === n && correct >= n - 1 && demoOk;
   console.log(
-    `\n${pass ? "EVAL PASSED" : "EVAL FAILED"} (threshold: ${n}/${n} schema-valid, ${n - 1}/${n} correct, all demo paths)`,
+    group
+      ? `\n${pass ? "GROUP PASSED" : "GROUP FAILED"} (${group}: every result schema-valid and correct)`
+      : `\n${pass ? "EVAL PASSED" : "EVAL FAILED"} (threshold: ${n}/${n} schema-valid, ${n - 1}/${n} correct, all demo paths)`,
   );
   process.exit(pass ? 0 : 1);
 }

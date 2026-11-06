@@ -73,11 +73,17 @@ function escapeRe(s: string) {
  */
 export class RedactingProvider implements LlmProvider {
   readonly kind: string;
+  readonly schemaAttempts?: 1 | 2;
   constructor(
     private readonly inner: LlmProvider,
     private readonly onStats?: (name: string, stats: Record<string, number>) => void,
   ) {
     this.kind = `redacted(${inner.kind})`;
+    this.schemaAttempts = inner.schemaAttempts;
+  }
+
+  discard(fixture: string): void {
+    this.inner.discard?.(fixture);
   }
 
   async complete(req: LlmRequest): Promise<LlmResponse> {

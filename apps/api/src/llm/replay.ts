@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, existsSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { LlmProvider, LlmRequest, LlmResponse } from "./types.js";
 
@@ -63,13 +63,39 @@ export class ReplayProvider implements LlmProvider {
   }
 }
 
+export interface RecordingOptions {
+  /** false: one structured attempt per call (no schema retry), to save quota. Default true. */
+  schemaRetry?: boolean;
+  /** Where schema-invalid replies are moved for inspection (never served). Default: `.replay-tmp/rejected`. */
+  rejectedDir?: string;
+}
+
 export class RecordingProvider implements LlmProvider {
   readonly kind: string;
+  readonly schemaAttempts: 1 | 2;
+  private readonly rejectedDir: string;
   constructor(
     private readonly inner: LlmProvider,
     private readonly dir: string,
+    opts: RecordingOptions = {},
   ) {
     this.kind = `recording(${inner.kind})`;
+    this.schemaAttempts = opts.schemaRetry === false ? 1 : 2;
+    this.rejectedDir = opts.rejectedDir ?? path.resolve(".replay-tmp", "rejected");
+  }
+
+  /**
+   * A reply that failed schema validation is moved out of the fixture dir,
+   * so the next recording run calls the LLM again for that prompt only.
+   */
+  discard(fixture: string): void {
+    const [name, key] = fixture.split("/");
+    if (!name || !key || !/^[a-z_]+$/.test(name) || !/^[0-9a-f]{32}$/.test(key)) return;
+    const from = path.join(this.dir, name, `${key}.json`);
+    if (!existsSync(from)) return;
+    const to = path.join(this.rejectedDir, name, `${key}.json`);
+    mkdirSync(path.dirname(to), { recursive: true });
+    renameSync(from, to);
   }
 
   async complete(req: LlmRequest): Promise<LlmResponse> {
