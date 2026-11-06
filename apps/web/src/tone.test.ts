@@ -31,4 +31,3 @@ describe("tone mapping", () => {
     expect(unknownDeal.icon).toBeDefined();
   });
 });
-

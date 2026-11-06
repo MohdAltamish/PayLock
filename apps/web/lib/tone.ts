@@ -62,4 +62,3 @@ export function getMoneyTone(state: string): ToneConfig {
 export function getStateTone(state: string): ToneConfig {
   return STATE_TONE_MAP[state] ?? { tone: "neutral", icon: Circle };
 }
-
