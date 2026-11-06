@@ -32,4 +32,3 @@ describe("wizard step mapping", () => {
     expect(getDealStep("SETTLEMENT_ERROR")).toBeNull();
   });
 });
-

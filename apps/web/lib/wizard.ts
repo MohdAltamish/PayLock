@@ -12,4 +12,3 @@ export function getDealStep(state?: string | null): WizardStep {
   if (["GUARDED", "FLAGGED", "AWAITING_APPROVAL", "FUNDING"].includes(state)) return 3;
   return null;
 }
-
