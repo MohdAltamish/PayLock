@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Info } from "lucide-react";
 import { ErrorNote, Shell, useMe } from "@/components/ui";
 import { Button } from "@/components/primitives/Button";
-import { Card } from "@/components/primitives/Card";
+import { Card, CardHeader, CardTitle } from "@/components/primitives/Card";
 import { Field, Input } from "@/components/primitives/Field";
 import { api } from "@/lib/api";
 
@@ -37,14 +38,23 @@ export default function PolicyPage() {
   }
 
   const field = (k: keyof Omit<Policy, "allowMediumRisk">, label: string) => (
-    <Field id={`policy-${k}`} label={`${label} (USD)`}>
-      <Input
-        id={`policy-${k}`}
-        value={p[k]}
-        inputMode="decimal"
-        pattern="\d{1,10}\.\d{2}"
-        onChange={(e) => setP({ ...p, [k]: e.target.value })}
-      />
+    <Field id={`policy-${k}`} label={label}>
+      <div className="relative flex items-center">
+        <span
+          className="absolute left-3 text-sm font-semibold text-muted pointer-events-none select-none"
+          aria-hidden="true"
+        >
+          $
+        </span>
+        <Input
+          id={`policy-${k}`}
+          value={p[k]}
+          inputMode="decimal"
+          pattern="\d{1,10}\.\d{2}"
+          className="pl-7 tabular-nums"
+          onChange={(e) => setP({ ...p, [k]: e.target.value })}
+        />
+      </div>
     </Field>
   );
 
@@ -68,30 +78,52 @@ export default function PolicyPage() {
 
   return (
     <Shell>
-      <div className="max-w-xl mx-auto space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">Spend policy</h1>
-        <Card>
-          <form className="space-y-4" onSubmit={save}>
+      <div className="max-w-xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-text">Spend policy</h1>
+          <p className="text-xs sm:text-sm text-muted">
+            Configure automated funding limits and risk approval requirements.
+          </p>
+        </div>
+
+        <Card className="p-4 sm:p-6">
+          <CardHeader className="mb-4">
+            <CardTitle>Spending Limits (USD)</CardTitle>
+          </CardHeader>
+
+          <form className="space-y-5" onSubmit={save}>
             {field("maxPerDeal", "Max per deal")}
             {field("dailyCap", "Daily cap")}
             {field("approvalThreshold", "Approval threshold")}
 
-            <label className="flex items-start gap-2.5 pt-1 text-sm text-text cursor-pointer">
+            <label className="flex items-start gap-3 p-3.5 rounded-control border border-border bg-slate-50/70 text-xs sm:text-sm text-text cursor-pointer hover:bg-slate-50 transition-colors">
               <input
                 type="checkbox"
-                className="mt-1 rounded border-border text-accent focus:ring-accent"
+                className="mt-0.5 h-4 w-4 rounded border-border text-accent focus:ring-accent accent-accent cursor-pointer"
                 checked={p.allowMediumRisk}
                 onChange={(e) => setP({ ...p, allowMediumRisk: e.target.checked })}
               />
-              <span>Fund medium-risk deals without asking me (signals are still logged)</span>
+              <div className="space-y-0.5">
+                <span className="font-medium text-text block">Auto-fund medium-risk deals</span>
+                <span className="text-xs text-muted block leading-snug">
+                  Fund medium-risk deals without asking me (signals are still logged)
+                </span>
+              </div>
             </label>
 
-            <p className="text-xs text-muted leading-relaxed bg-slate-50 p-3 rounded-control border border-border">
-              Deals up to ${p.approvalThreshold} fund without your tap when risk is Low
-              {p.allowMediumRisk ? " or Medium" : ""}; anything above that or riskier needs your
-              approval. Nothing over ${p.maxPerDeal} per deal or ${p.dailyCap} per day is ever
-              funded.
-            </p>
+            {/* Preview callout */}
+            <div className="p-3.5 rounded-control border border-blue-200 bg-blue-50/60 text-xs text-blue-900 leading-relaxed flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <span className="font-semibold block mb-0.5">Policy enforcement preview:</span>
+                <p>
+                  Deals up to ${p.approvalThreshold} fund without your tap when risk is Low
+                  {p.allowMediumRisk ? " or Medium" : ""}; anything above that or riskier needs your
+                  approval. Nothing over ${p.maxPerDeal} per deal or ${p.dailyCap} per day is ever
+                  funded.
+                </p>
+              </div>
+            </div>
 
             <ErrorNote error={error} />
             {saved && (
