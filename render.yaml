@@ -55,7 +55,7 @@ services:
       - key: PAYPAL_CLIENT_SECRET
         value: "ENO8jMoOlncKKNRD2mKpKtuJe4x_FA9XItfvdyMs4LMd4644t2peE5ZO8QA_gBFC_bqZf656A_5X68b9"
       - key: PAYPAL_WEBHOOK_ID
-        value: "6CK65828D0701523J"
+        value: "0YY564588V795923D"
       - key: PAYPAL_PLATFORM_EMAIL
         value: "admin@paylock.example.com"
       - key: PAYPAL_SANDBOX_SELLER_EMAIL
