@@ -1,0 +1,113 @@
+# Render Blueprint for Paylock (BUILD_PLAN Task 21, INSTRUCTIONS section 8).
+# API on Starter (paid: needed for preDeployCommand and the shell), web and
+# Postgres on free plans. Free Postgres expires 30 days after creation; upgrade
+# it before submission or follow the re-create procedure in INSTRUCTIONS 8.
+#
+# All commands run from the repo root so npm workspaces resolve. NODE_ENV is
+# production at build time, so `npm ci` needs --include=dev (prisma, tsup,
+# tsx, typescript and Next's types are devDependencies).
+#
+# Secrets use `sync: false`: Render asks for them when the Blueprint is first
+# applied and never stores them in this file. E2E_FUNDING is deliberately
+# absent (the test card route must never exist on Render).
+
+databases:
+  - name: paylock-db
+    plan: free
+    region: oregon
+    postgresMajorVersion: "16"
+    databaseName: paylock
+    user: paylock
+
+services:
+  - type: web
+    name: paylock-api
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build -w apps/api
+    preDeployCommand: npm run db:deploy -w apps/api
+    # Seeds the demo buyer, personas and policy once (upserts, safe to re-run from the shell).
+    initialDeployHook: npm run seed -w apps/api
+    # Started from the repo root (not -w) so fixtures/replay resolves against the root.
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "20.19.0"
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: paylock-db
+          property: connectionString
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      # Printed by `npm run webhook:register -- https://<api>.onrender.com/webhooks/paypal`.
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_PLATFORM_EMAIL
+        sync: false
+      # Payout receiver for the demo personas (read by the seed).
+      - key: PAYPAL_SANDBOX_SELLER_EMAIL
+        sync: false
+      - key: AUTH_SAFE_WINDOW_HOURS
+        value: "72"
+      # Public origins. Change both if Render assigns different subdomains.
+      - key: APP_URL
+        value: https://paylock-web.onrender.com
+      - key: API_URL
+        value: https://paylock-api.onrender.com
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PAYLOCK_FREEZE
+        value: "0"
+      # Recorded fixtures (fixtures/replay); the hosted demo makes no live LLM calls.
+      - key: AGENTS_MODE
+        value: replay
+      # off: a prompt with no fixture fails safe (rules-only risk, NEEDS_REVIEW).
+      # live: falls back to the LLM, which spends the account-wide free daily quota.
+      - key: LLM_REPLAY_FALLBACK
+        value: "off"
+      - key: LLM_PROVIDER
+        value: openai
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: LLM_MODEL
+        value: nvidia/nemotron-3.5-lightning:free
+      - key: LLM_JSON_MODE
+        value: json_schema
+      # Only used when LLM_REPLAY_FALLBACK=live.
+      - key: LLM_API_KEY
+        sync: false
+      - key: FUNDING_TIMEOUT_MINUTES
+        value: "30"
+      - key: SWEEPER_INTERVAL_MS
+        value: "5000"
+
+  - type: web
+    name: paylock-web
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build -w apps/web
+    # -w keeps cwd at apps/web, where the deliverables route resolves ../../fixtures.
+    startCommand: npm run start -w apps/web
+    envVars:
+      - key: NODE_VERSION
+        value: "20.19.0"
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      # Read at build time: next.config rewrites /api/* to this origin (decision J).
+      - key: API_URL
+        value: https://paylock-api.onrender.com

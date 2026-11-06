@@ -161,8 +161,8 @@ Between runs: `npm run demo:reset` (deletes demo deals and re-bases persona acco
 ## 8. Deploy to Render
 `render.yaml` defines the services. All builds run from the **repo root** so npm workspaces resolve.
 
-1. API web service (Starter): build `npm ci && npm run build -w apps/api`, pre-deploy `npm run db:deploy -w apps/api`, start `npm run start -w apps/api`. Health check `/healthz`.
-2. Web web service (Next.js App Router needs a server, not a static site): build `npm ci && npm run build -w apps/web`, start `npm run start -w apps/web`. Set `API_URL` to the API's internal or public URL.
+1. API web service (Starter): build `npm ci --include=dev && npm run build -w apps/api` (NODE_ENV is production at build time, and prisma, tsup and tsx are devDependencies), pre-deploy `npm run db:deploy -w apps/api`, start `node apps/api/dist/server.js` from the repo root so `fixtures/replay` resolves. Health check `/healthz`. `initialDeployHook` seeds once.
+2. Web web service (Next.js App Router needs a server, not a static site): build `npm ci --include=dev && npm run build -w apps/web`, start `npm run start -w apps/web`. `API_URL` is the API's public URL and must be set at build time (the `/api` rewrite is baked into the build).
 3. Postgres: managed. Free Postgres expires 30 days after creation and judging may run weeks past Nov 13. Either upgrade to a paid plan before submission, or follow the re-create procedure below.
 4. Set all env vars (never `E2E_FUNDING`). Point the PayPal webhook at `https://<api>.onrender.com/webhooks/paypal` with `npm run webhook:register`.
 5. Seed once from the **API** service shell (free web services have no shell): `npm run seed -w apps/api`.
