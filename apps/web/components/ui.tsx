@@ -7,32 +7,49 @@ import { Lock } from "lucide-react";
 import { api, post, type DealView, type Me } from "@/lib/api";
 import { MONEY_LABEL, STATE_LABEL } from "@/lib/copy";
 import { cn } from "@/lib/cn";
-
-const MONEY_ICON: Record<string, string> = {
-  none: "○",
-  reserving: "◔",
-  reserved: "🔒",
-  releasing: "◑",
-  released: "✓",
-  returned: "↩",
-  attention: "!",
-};
+import { getMoneyTone, getStateTone } from "@/lib/tone";
+import { Badge } from "@/components/primitives/Badge";
+import { Alert } from "@/components/primitives/Alert";
 
 /** Money state is always visible, with text and icon (never color only). */
-export function MoneyBadge({ deal }: { deal: Pick<DealView, "moneyState" | "confirming"> }) {
-  const label = deal.confirming ? "Confirming with PayPal…" : MONEY_LABEL[deal.moneyState];
+export function MoneyBadge({
+  deal,
+  className,
+}: {
+  deal: Pick<DealView, "moneyState" | "confirming">;
+  className?: string;
+}) {
+  const label = deal.confirming
+    ? "Confirming with PayPal…"
+    : (MONEY_LABEL[deal.moneyState] ?? deal.moneyState);
+  const { tone, icon: Icon } = getMoneyTone(deal.moneyState);
+
   return (
-    <span className={`badge money-${deal.moneyState}`} role="status" data-testid="money-state">
-      <span aria-hidden="true">{MONEY_ICON[deal.moneyState]}</span> {label}
-    </span>
+    <Badge
+      tone={tone}
+      role="status"
+      data-testid="money-state"
+      icon={<Icon className="w-3.5 h-3.5" aria-hidden="true" />}
+      className={cn(`money-${deal.moneyState}`, className)}
+    >
+      {label}
+    </Badge>
   );
 }
 
-export function StateBadge({ state }: { state: string }) {
+export function StateBadge({ state, className }: { state: string; className?: string }) {
+  const label = STATE_LABEL[state] ?? state;
+  const { tone, icon: Icon } = getStateTone(state);
+
   return (
-    <span className={`badge state-${state}`} data-testid="deal-state">
-      {STATE_LABEL[state] ?? state}
-    </span>
+    <Badge
+      tone={tone}
+      data-testid="deal-state"
+      icon={<Icon className="w-3.5 h-3.5" aria-hidden="true" />}
+      className={cn(`state-${state}`, className)}
+    >
+      {label}
+    </Badge>
   );
 }
 
@@ -159,11 +176,11 @@ export function Shell({ children }: { children: ReactNode }) {
   );
 }
 
-export function ErrorNote({ error }: { error: string | null }) {
+export function ErrorNote({ error, className }: { error: string | null; className?: string }) {
   if (!error) return null;
   return (
-    <p className="error text-danger font-medium text-sm mt-2" role="alert">
+    <Alert variant="danger" className={cn("mt-2", className)}>
       {error}
-    </p>
+    </Alert>
   );
 }

@@ -4,6 +4,9 @@ import { DEMO_PRESETS } from "@paylock/schemas";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ErrorNote, Shell } from "@/components/ui";
+import { Button } from "@/components/primitives/Button";
+import { Card } from "@/components/primitives/Card";
+import { Field, Select, Textarea } from "@/components/primitives/Field";
 import { api, post } from "@/lib/api";
 
 interface DemoUser {
@@ -50,55 +53,70 @@ export default function NewDeal() {
 
   return (
     <Shell>
-      <h1>New deal</h1>
-      <form className="card" onSubmit={submit}>
-        <p className="muted">Demo presets (recorded, so they always give the same result):</p>
-        <div className="chips">
-          {DEMO_PRESETS.map((p) => (
-            <button
-              type="button"
-              key={p.key}
-              onClick={() => preset(p)}
-              data-testid={`preset-${p.key}`}
+      <div className="max-w-2xl mx-auto space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-text">New deal</h1>
+        <Card>
+          <form className="space-y-5" onSubmit={submit}>
+            <div>
+              <p className="text-xs font-medium text-muted uppercase tracking-wider mb-2">
+                Demo presets (recorded, so they always give the same result):
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DEMO_PRESETS.map((p) => (
+                  <button
+                    type="button"
+                    key={p.key}
+                    onClick={() => preset(p)}
+                    data-testid={`preset-${p.key}`}
+                    className="inline-flex items-center px-3 py-1.5 rounded-control text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200 hover:bg-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
+                  >
+                    {p.label} · {p.seller}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Field id="seller-select" label="Seller">
+              <Select
+                id="seller-select"
+                value={sellerId}
+                onChange={(e) => setSellerId(e.target.value)}
+                data-testid="seller"
+              >
+                {sellers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.displayName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field id="request-textarea" label="What do you need done? Include your budget in USD.">
+              <Textarea
+                id="request-textarea"
+                value={request}
+                onChange={(e) => setRequest(e.target.value)}
+                required
+                minLength={10}
+                maxLength={4000}
+                data-testid="request"
+                rows={5}
+              />
+            </Field>
+
+            <ErrorNote error={error} />
+
+            <Button
+              type="submit"
+              disabled={busy || !sellerId || request.length < 10}
+              loading={busy}
+              data-testid="create-deal"
             >
-              {p.label} · {p.seller}
-            </button>
-          ))}
-        </div>
-        <label>
-          Seller
-          <select
-            value={sellerId}
-            onChange={(e) => setSellerId(e.target.value)}
-            data-testid="seller"
-          >
-            {sellers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          What do you need done? Include your budget in USD.
-          <textarea
-            value={request}
-            onChange={(e) => setRequest(e.target.value)}
-            required
-            minLength={10}
-            maxLength={4000}
-            data-testid="request"
-          />
-        </label>
-        <ErrorNote error={error} />
-        <button
-          type="submit"
-          disabled={busy || !sellerId || request.length < 10}
-          data-testid="create-deal"
-        >
-          {busy ? "Paylock AI is drafting the contract…" : "Draft the contract"}
-        </button>
-      </form>
+              {busy ? "Paylock AI is drafting the contract…" : "Draft the contract"}
+            </Button>
+          </form>
+        </Card>
+      </div>
     </Shell>
   );
 }
