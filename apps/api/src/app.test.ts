@@ -53,7 +53,7 @@ describe("request ids", () => {
       url: "/healthz",
       headers: { "x-request-id": "bad id\r\nx-evil: 1" },
     });
-    expect(res.headers["x-request-id"]).not.toContain("bad");
+    expect(res.headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
 
