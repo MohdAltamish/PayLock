@@ -74,7 +74,7 @@ Buyer                 Paylock                         PayPal                 Sel
 - **Branching**: trunk-based. `main` is always deployable. Short-lived branches `feat/*`, `fix/*`.
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`).
 - **MRs**: one per phase at minimum, CI green, link to issue. Squash merge.
-- **CI** (`.gitlab-ci.yml`): lint, typecheck, unit tests, agent eval fixtures, Prisma migrate check, build, SAST, Dependency Scanning, secret detection.
+- **CI** (`.github/workflows/ci.yml`, GitHub Actions): lint, typecheck, unit and DB tests against a Postgres 16 service, build, and gitleaks secret scanning on every push and pull request to `main`. The agent eval job (replay fixtures) runs on manual dispatch.
 - **Deploy**: Render auto-deploys `main`. Preview environments optional.
 - **Issues**: labels `P0`, `P1`, `P2`, `area::agents`, `area::paypal`, `area::ui`, `area::docs`.
 - **Definition of done**: tests pass, docs updated, demo path re-verified if touched.

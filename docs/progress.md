@@ -52,7 +52,7 @@ Times are focused work in UTC. Budgets and cut triggers are in BUILD_PLAN.md sec
 | Task 13 Skills | | | Committed `35ac41d`; times not logged |
 | Tasks 14 to 16 Negotiator, Guardian, Verifier, eval | | | Built in a session whose times were not logged |
 
-Status (2026-11-06): code, unit tests (643) and lint pass. `npm run eval` (replay) fails because only 1 replay fixture exists. `npm run eval:record` hit OpenRouter's `free-models-per-day` 429 on every call, so fixtures could not be recorded. Blocked on the owner: wait for the daily reset, or add OpenRouter credits (raises the free-model daily limit), then run `npm run eval:record` and `npm run eval`. The optional Verifier tool loop (decision H) waits for a passing eval.
+Status (2026-11-06): code, unit tests (643) and lint pass. `npm run eval` (replay) failed at that point because only 1 replay fixture existed. `fixtures/replay/` now holds 22 recorded fixtures (9 guardian_signals, 7 negotiator_contract, 6 verifier_judgment); re-run `npm run eval` to confirm it passes. `npm run eval:record` hit OpenRouter's `free-models-per-day` 429 on every call, so fixtures could not be recorded. Blocked on the owner: wait for the daily reset, or add OpenRouter credits (raises the free-model daily limit), then run `npm run eval:record` and `npm run eval`. The optional Verifier tool loop (decision H) waits for a passing eval.
 
 ## Phase 4: Guardrails and UI (budget 10h, cut trigger 12.5h)
 

@@ -48,7 +48,7 @@ Never commit this token or paste it into issues or chat. The app never uses it.
 
 ## 1. Clone and install
 ```bash
-git clone https://gitlab.com/gitlab-ai-hackathon/paylock.git
+git clone https://github.com/MohdAltamish/PayLock.git paylock
 cd paylock
 nvm use        # Node 20 from .nvmrc
 npm install
