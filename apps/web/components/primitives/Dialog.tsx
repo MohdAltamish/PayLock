@@ -62,7 +62,7 @@ export function Dialog({ open, onClose, title, description, children, className 
     >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
-          <h2 id="dialog-title" className="text-lg font-semibold text-text leading-tight">
+          <h2 id="dialog-title" className="text-lg font-bold text-text leading-tight">
             {title}
           </h2>
           {description && (

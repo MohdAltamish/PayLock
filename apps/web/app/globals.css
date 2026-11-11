@@ -1,28 +1,74 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #fafbfc;
+  /* Palette and type from trust-circle.onrender.com */
+  --color-background: #f4f6f4;
   --color-surface: #ffffff;
-  --color-border: #e6eaf0;
-  --color-text: #0f172a;
-  --color-muted: #64748b;
-  --color-accent: #2563eb;
-  --color-accent-text: #1d4ed8;
+  --color-border: #d9dfdb;
+  --color-text: #14201b;
+  --color-muted: #4a5651;
+  --color-accent: #1e5a47;
+  --color-accent-text: #14402f;
 
-  --color-success: #16a34a;
-  --color-success-text: #15803d;
-  --color-warning: #d97706;
-  --color-warning-text: #b45309;
-  --color-danger: #dc2626;
-  --color-danger-text: #b91c1c;
+  --color-success: #1e5a47;
+  --color-success-text: #14402f;
+  --color-warning: #a5690f;
+  --color-warning-text: #6e4300;
+  --color-danger: #a2302a;
+  --color-danger-text: #8a231e;
 
-  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Hardcoded Tailwind shades mapped onto the same palette */
+  --color-slate-50: #f4f6f4;
+  --color-slate-100: #eef1ef;
+  --color-slate-200: #d9dfdb;
+  --color-slate-300: #c2cbc6;
+  --color-slate-400: #7d8a84;
+  --color-slate-500: #5d6a64;
+  --color-slate-600: #4a5651;
+  --color-slate-700: #3f4b46;
+  --color-slate-800: #26332d;
+  --color-slate-900: #14201b;
 
-  --radius-card: 10px;
-  --radius-control: 8px;
+  --color-emerald-50: #e3ede8;
+  --color-emerald-200: #b9d2c6;
+  --color-emerald-300: #95bba9;
+  --color-emerald-600: #1e5a47;
+  --color-emerald-700: #1a4e3e;
+  --color-emerald-800: #14402f;
 
-  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
-  --shadow-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --color-blue-50: #e6eef7;
+  --color-blue-100: #dce3ec;
+  --color-blue-200: #c3d3e6;
+  --color-blue-600: #2c5c8f;
+  --color-blue-700: #24456b;
+  --color-blue-800: #1d3858;
+  --color-blue-900: #172d47;
+  --color-indigo-50: #e6eef7;
+  --color-indigo-200: #c3d3e6;
+  --color-indigo-700: #24456b;
+
+  --color-amber-50: #fbf0dc;
+  --color-amber-200: #ecd2a2;
+  --color-amber-300: #e0bd7c;
+  --color-amber-600: #a5690f;
+  --color-amber-800: #6e4300;
+  --color-amber-900: #5a3700;
+
+  --color-red-50: #f8e5e3;
+  --color-red-100: #f2d4d0;
+  --color-red-200: #e8bbb6;
+  --color-red-300: #d99891;
+  --color-red-400: #c0605a;
+  --color-red-600: #a2302a;
+  --color-red-800: #8a231e;
+
+  --font-sans: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 20px;
+  --radius-control: 14px;
+
+  --shadow-card: 0 1px 2px 0 rgba(20, 32, 27, 0.05), 0 1px 3px 0 rgba(20, 32, 27, 0.04);
+  --shadow-hover: 0 6px 16px -4px rgba(20, 32, 27, 0.12), 0 2px 4px -2px rgba(20, 32, 27, 0.06);
 }
 
 @layer base {
@@ -33,7 +79,7 @@
 
   @media (min-width: 768px) {
     html {
-      font-size: 15px;
+      font-size: 16px;
     }
   }
 

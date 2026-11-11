@@ -41,7 +41,7 @@ export default function PolicyPage() {
     <Field id={`policy-${k}`} label={label}>
       <div className="relative flex items-center">
         <span
-          className="absolute left-3 text-sm font-semibold text-muted pointer-events-none select-none"
+          className="absolute left-3 text-sm font-bold text-muted pointer-events-none select-none"
           aria-hidden="true"
         >
           $
@@ -80,7 +80,9 @@ export default function PolicyPage() {
     <Shell>
       <div className="max-w-xl mx-auto space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text">Spend policy</h1>
+          <h1 className="text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-text">
+            Spend policy
+          </h1>
           <p className="text-xs sm:text-sm text-muted">
             Configure automated funding limits and risk approval requirements.
           </p>
@@ -115,7 +117,7 @@ export default function PolicyPage() {
             <div className="p-3.5 rounded-control border border-blue-200 bg-blue-50/60 text-xs text-blue-900 leading-relaxed flex items-start gap-2.5">
               <Info className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
               <div>
-                <span className="font-semibold block mb-0.5">Policy enforcement preview:</span>
+                <span className="font-bold block mb-0.5">Policy enforcement preview:</span>
                 <p>
                   Deals up to ${p.approvalThreshold} fund without your tap when risk is Low
                   {p.allowMediumRisk ? " or Medium" : ""}; anything above that or riskier needs your
@@ -127,7 +129,7 @@ export default function PolicyPage() {
 
             <ErrorNote error={error} />
             {saved && (
-              <p role="status" className="text-xs font-semibold text-success">
+              <p role="status" className="text-xs font-bold text-success">
                 Saved.
               </p>
             )}

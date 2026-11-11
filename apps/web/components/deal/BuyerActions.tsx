@@ -120,7 +120,7 @@ export function BuyerActions({
               </p>
 
               <div className="space-y-2">
-                <p className="font-semibold text-muted uppercase tracking-wider text-[11px]">
+                <p className="font-bold text-muted uppercase tracking-wider text-[11px]">
                   Acceptance Criteria ({deal.contract.criteria.length})
                 </p>
                 <div className="space-y-2">
@@ -141,7 +141,7 @@ export function BuyerActions({
                           </div>
                         </div>
                       </div>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                         Checked by {c.verifiable === "llm" ? "AI" : c.verifiable}
                       </span>
                     </div>
@@ -151,7 +151,7 @@ export function BuyerActions({
 
               {deal.contract.ambiguities.length > 0 && (
                 <div className="space-y-1 pt-1">
-                  <p className="font-semibold text-warning-text text-[11px]">Ambiguities flagged</p>
+                  <p className="font-bold text-warning-text text-[11px]">Ambiguities flagged</p>
                   {deal.contract.ambiguities.map((a, i) => (
                     <p
                       key={i}
@@ -263,19 +263,15 @@ export function BuyerActions({
           <div className="grid grid-cols-3 gap-2 p-3 rounded-control bg-slate-50 border border-border text-xs">
             <div>
               <span className="text-muted block">Amount</span>
-              <span className="font-semibold text-text tabular-nums text-sm">
-                {money(deal.amount)}
-              </span>
+              <span className="font-bold text-text tabular-nums text-sm">{money(deal.amount)}</span>
             </div>
             <div>
               <span className="text-muted block">Seller</span>
-              <span className="font-semibold text-text truncate block">
-                {deal.seller.displayName}
-              </span>
+              <span className="font-bold text-text truncate block">{deal.seller.displayName}</span>
             </div>
             <div>
               <span className="text-muted block">Criteria</span>
-              <span className="font-semibold text-text">
+              <span className="font-bold text-text">
                 {deal.contract?.criteria.length ?? 0} items
               </span>
             </div>

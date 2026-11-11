@@ -72,7 +72,7 @@ export function Alert({
     >
       {icon ?? config.defaultIcon}
       <div className="space-y-1">
-        {title && <h4 className="font-semibold leading-tight">{title}</h4>}
+        {title && <h4 className="font-bold leading-tight">{title}</h4>}
         <div className="text-sm opacity-90">{children}</div>
       </div>
     </div>

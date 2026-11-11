@@ -113,7 +113,7 @@ export function DecisionPanel({
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-sm border-collapse">
           <thead>
-            <tr className="border-b border-border text-xs font-semibold text-muted uppercase tracking-wider">
+            <tr className="border-b border-border text-xs font-bold text-muted uppercase tracking-wider">
               <th scope="col" className="pb-2 pr-4">
                 Criterion
               </th>
@@ -136,11 +136,11 @@ export function DecisionPanel({
                 </td>
                 <td className="py-2.5 px-3 whitespace-nowrap">
                   {r.met ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-success">
                       <Check className="w-3.5 h-3.5" aria-hidden="true" /> Yes
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-danger">
                       <X className="w-3.5 h-3.5" aria-hidden="true" /> No
                     </span>
                   )}
@@ -180,11 +180,11 @@ export function DecisionPanel({
                 {criteria.get(r.criterionId)?.description ?? r.criterionId}
               </p>
               {r.met ? (
-                <span className="inline-flex items-center gap-1 font-semibold text-success shrink-0">
+                <span className="inline-flex items-center gap-1 font-bold text-success shrink-0">
                   <Check className="w-3.5 h-3.5" aria-hidden="true" /> Yes
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 font-semibold text-danger shrink-0">
+                <span className="inline-flex items-center gap-1 font-bold text-danger shrink-0">
                   <X className="w-3.5 h-3.5" aria-hidden="true" /> No
                 </span>
               )}

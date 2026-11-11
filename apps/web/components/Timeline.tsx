@@ -122,7 +122,7 @@ export function Timeline({
                   <div className="flex items-center gap-2">
                     <span
                       className={cn(
-                        "inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold border",
+                        "inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold border",
                         actorChipStyles[actorLabel],
                       )}
                     >
@@ -131,7 +131,7 @@ export function Timeline({
                     <span
                       className={cn(
                         "text-sm font-medium leading-snug",
-                        isAlert ? "text-danger font-semibold" : "text-text",
+                        isAlert ? "text-danger font-bold" : "text-text",
                       )}
                     >
                       {eventTitle(e.type, p)}

@@ -66,7 +66,9 @@ export default function NewDeal() {
         <Stepper currentStep={1} />
 
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-text">New deal</h1>
+          <h1 className="text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-text">
+            New deal
+          </h1>
           <p className="text-xs sm:text-sm text-muted">
             Step 1: Describe the requirements and budget. Paylock AI will structure the contract.
           </p>
@@ -76,14 +78,14 @@ export default function NewDeal() {
           {me?.role === "seller" && (
             <Alert variant="warning" title="Buyer account required" className="mb-5">
               You are signed in as a seller (<strong>{me.displayName}</strong>). In Paylock, only
-              buyers set spend policies and draft deals. Please click <strong>Switch user</strong> in
-              the top right to select a buyer account.
+              buyers set spend policies and draft deals. Please click <strong>Switch user</strong>{" "}
+              in the top right to select a buyer account.
             </Alert>
           )}
 
           <form className="space-y-5" onSubmit={submit}>
             <div>
-              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
+              <p className="text-xs font-bold text-muted uppercase tracking-wider mb-2">
                 Demo presets:
               </p>
               <div className="flex flex-wrap gap-2">

@@ -22,7 +22,7 @@ export function ContractSidebar({ deal }: { deal: DealView }) {
           </p>
 
           <div className="space-y-2 pt-1">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wider">Criteria</p>
+            <p className="text-xs font-bold text-muted uppercase tracking-wider">Criteria</p>
             <div className="space-y-2">
               {deal.contract.criteria.map((c) => {
                 const r = decision?.perCriterion.find((x) => x.criterionId === c.id);
@@ -48,7 +48,7 @@ export function ContractSidebar({ deal }: { deal: DealView }) {
                         ) : null}
                         <span className="text-text font-medium leading-snug">{c.description}</span>
                       </div>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                         Checked by {c.verifiable === "llm" ? "AI" : c.verifiable}
                       </span>
                     </div>
@@ -73,7 +73,7 @@ export function ContractSidebar({ deal }: { deal: DealView }) {
 
           {deal.contract.ambiguities.length > 0 && (
             <div className="space-y-1.5 pt-2 border-t border-border/60">
-              <p className="text-xs font-semibold text-warning-text">Ambiguities identified</p>
+              <p className="text-xs font-bold text-warning-text">Ambiguities identified</p>
               {deal.contract.ambiguities.map((a, i) => (
                 <p
                   key={i}
@@ -113,7 +113,7 @@ export function ContractSidebar({ deal }: { deal: DealView }) {
                 key={m.id}
                 className="p-2.5 rounded-control bg-slate-50 border border-border text-xs space-y-1"
               >
-                <div className="flex items-center justify-between font-semibold text-text">
+                <div className="flex items-center justify-between font-bold text-text">
                   <span>
                     {m.from === "buyer" ? deal.buyer.displayName : deal.seller.displayName}
                   </span>
@@ -145,7 +145,7 @@ export function ContractSidebar({ deal }: { deal: DealView }) {
                   <span className="font-medium text-text capitalize">
                     {p.kind.toLowerCase()} #{p.attempt}
                   </span>
-                  <span className="font-semibold text-text tabular-nums">
+                  <span className="font-bold text-text tabular-nums">
                     {p.amount ? `$${p.amount} ` : ""}
                     <span className="font-normal text-muted">
                       ({p.paypalStatus ?? p.status.toLowerCase()})

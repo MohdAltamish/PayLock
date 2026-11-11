@@ -13,7 +13,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
     <div
       ref={ref}
       className={cn(
-        "rounded-card border border-border bg-surface p-4 sm:p-5 shadow-card transition-shadow duration-150",
+        "rounded-card border border-border bg-surface p-5 sm:p-6 shadow-card transition-shadow duration-150",
         interactive && "hover:shadow-hover cursor-pointer",
         className,
       )}
@@ -38,7 +38,10 @@ export function CardHeader({ className, children, ...props }: HTMLAttributes<HTM
 export function CardTitle({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-base font-semibold leading-none tracking-tight text-text", className)}
+      className={cn(
+        "text-[19px] font-extrabold leading-tight tracking-[-0.01em] text-text",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -52,7 +55,7 @@ export function CardDescription({
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-sm text-muted", className)} {...props}>
+    <p className={cn("text-[15px] text-muted", className)} {...props}>
       {children}
     </p>
   );

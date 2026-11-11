@@ -45,10 +45,10 @@ export function RiskBanner({ risk }: { risk: NonNullable<DealView["risk"]> }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
-          <h2 className="text-base font-semibold text-text">{config.label}</h2>
+          <h2 className="text-base font-bold text-text">{config.label}</h2>
           <span className="text-xs text-muted font-medium">· score {risk.score}/100</span>
         </div>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded border bg-slate-50 text-muted">
+        <span className="text-xs font-bold px-2 py-0.5 rounded border bg-slate-50 text-muted">
           {config.rec}
         </span>
       </div>
@@ -79,7 +79,7 @@ export function RiskBanner({ risk }: { risk: NonNullable<DealView["risk"]> }) {
                 >
                   {s.source === "rule" ? "Rule" : "AI"}
                 </span>
-                <strong className="text-text font-semibold">
+                <strong className="text-text font-bold">
                   {s.code.replaceAll("_", " ").toLowerCase()}
                 </strong>{" "}
                 ({s.weight > 0 ? "+" : ""}

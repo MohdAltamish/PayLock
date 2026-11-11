@@ -9,7 +9,7 @@ export function DealHeader({ deal }: { deal: DealView }) {
     <div className="sticky top-14 z-30 bg-background/95 backdrop-blur-xs border-b border-border/80 py-3.5 mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="space-y-1">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-text">
+          <h1 className="text-[26px] sm:text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-text">
             {deal.contract?.title ?? "Deal"}
           </h1>
           <p className="text-xs sm:text-sm text-muted">

@@ -31,7 +31,7 @@ export function SettlementError({
         <CardTitle className="text-danger">PayPal could not complete this step</CardTitle>
       </CardHeader>
       <p className="text-xs text-text">
-        Step: <span className="font-semibold">{failed?.kind.toLowerCase() ?? "settlement"}</span>
+        Step: <span className="font-bold">{failed?.kind.toLowerCase() ?? "settlement"}</span>
         {failed?.error ? ` · PayPal: ${failed.error}` : ""}
         {failed?.paypalStatus ? ` · status ${failed.paypalStatus}` : ""}
       </p>

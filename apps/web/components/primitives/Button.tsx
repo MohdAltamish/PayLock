@@ -16,18 +16,18 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent text-white hover:bg-accent-text shadow-sm border border-transparent disabled:bg-slate-300 disabled:text-slate-500",
+    "bg-accent text-white hover:bg-accent-text border-2 border-transparent disabled:bg-slate-300 disabled:text-slate-500",
   secondary:
-    "bg-surface text-text border border-border hover:bg-slate-50 hover:border-slate-300 shadow-sm disabled:bg-slate-50 disabled:text-slate-400",
+    "bg-surface text-accent border-2 border-accent hover:bg-emerald-50 disabled:bg-slate-50 disabled:text-slate-400",
   destructive:
-    "bg-danger text-white hover:bg-danger-text shadow-sm border border-transparent disabled:bg-red-200 disabled:text-red-400",
+    "bg-danger text-white hover:bg-danger-text border-2 border-transparent disabled:bg-red-200 disabled:text-red-400",
   ghost:
-    "bg-transparent text-muted hover:text-text hover:bg-slate-100 border border-transparent disabled:text-slate-400",
+    "bg-transparent text-muted hover:text-text hover:bg-emerald-50 border-2 border-transparent disabled:text-slate-400",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "px-2.5 py-1 text-xs min-h-[32px] gap-1.5",
-  md: "px-3.5 py-2 text-sm min-h-[40px] gap-2",
+  sm: "px-3.5 py-1.5 text-[14px] min-h-[38px] gap-1.5",
+  md: "px-5 py-2.5 text-[16px] min-h-[48px] gap-2",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -51,7 +51,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={isDisabled}
       aria-busy={loading ? "true" : undefined}
       className={cn(
-        "inline-flex items-center justify-center font-medium rounded-control transition-colors duration-150 cursor-pointer disabled:cursor-not-allowed select-none",
+        "inline-flex items-center justify-center font-bold rounded-control transition-[color,background-color,transform] duration-150 active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed select-none",
         "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
         variantClasses[variant],
         sizeClasses[size],
@@ -93,7 +93,7 @@ export function ButtonLink({
   return (
     <Link
       className={cn(
-        "inline-flex items-center justify-center font-medium rounded-control transition-colors duration-150 select-none",
+        "inline-flex items-center justify-center font-bold rounded-control transition-[color,background-color,transform] duration-150 active:scale-[0.98] select-none",
         "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
         variantClasses[variant],
         sizeClasses[size],

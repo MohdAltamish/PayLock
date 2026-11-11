@@ -29,7 +29,7 @@ export function Stepper({ currentStep }: { currentStep: WizardStep }) {
               >
                 <span
                   className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors",
                     isCurrent
                       ? "bg-accent text-white ring-2 ring-accent/30 ring-offset-2"
                       : isCompleted
@@ -46,7 +46,7 @@ export function Stepper({ currentStep }: { currentStep: WizardStep }) {
                 <span
                   className={cn(
                     "text-xs whitespace-nowrap",
-                    isCurrent ? "font-semibold text-text" : "font-medium text-muted",
+                    isCurrent ? "font-bold text-text" : "font-medium text-muted",
                   )}
                 >
                   {s.label}

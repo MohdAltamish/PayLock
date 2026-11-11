@@ -74,7 +74,9 @@ export default function DealsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-text">Deals</h1>
+            <h1 className="text-[32px] font-extrabold leading-tight tracking-[-0.01em] text-text">
+              Deals
+            </h1>
             <p className="text-xs sm:text-sm text-muted">
               Manage your active and completed escrow transactions.
             </p>
@@ -104,7 +106,7 @@ export default function DealsPage() {
                 className={cn(
                   "px-3 py-1.5 rounded-control transition-colors duration-150 flex items-center gap-1.5 cursor-pointer",
                   isSelected
-                    ? "bg-surface text-text font-semibold shadow-xs"
+                    ? "bg-surface text-text font-bold shadow-xs"
                     : "text-slate-600 hover:text-text",
                 )}
               >
@@ -171,7 +173,7 @@ export default function DealsPage() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-slate-50/50 text-xs font-semibold text-muted uppercase tracking-wider">
+                  <tr className="border-b border-border bg-slate-50/50 text-xs font-bold text-muted uppercase tracking-wider">
                     <th scope="col" className="py-3 px-4">
                       Title & Counterparty
                     </th>
@@ -200,7 +202,7 @@ export default function DealsPage() {
                         <td className="py-3.5 px-4">
                           <Link
                             href={`/deals/${d.id}`}
-                            className="font-semibold text-text hover:text-accent hover:underline text-sm block"
+                            className="font-bold text-text hover:text-accent hover:underline text-sm block"
                           >
                             {d.title ?? "Untitled Deal"}
                           </Link>
@@ -208,7 +210,7 @@ export default function DealsPage() {
                             {d.role === "buyer" ? `with ${d.seller}` : `for ${d.buyer}`}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 tabular-nums font-semibold text-text">
+                        <td className="py-3.5 px-4 tabular-nums font-bold text-text">
                           ${d.amount}
                         </td>
                         <td className="py-3.5 px-4">
@@ -250,7 +252,7 @@ export default function DealsPage() {
                       <div>
                         <Link
                           href={`/deals/${d.id}`}
-                          className="font-semibold text-text text-sm hover:text-accent block leading-tight"
+                          className="font-bold text-text text-sm hover:text-accent block leading-tight"
                         >
                           {d.title ?? "Untitled Deal"}
                         </Link>
@@ -258,7 +260,7 @@ export default function DealsPage() {
                           {d.role === "buyer" ? `with ${d.seller}` : `for ${d.buyer}`}
                         </p>
                       </div>
-                      <span className="font-semibold text-text tabular-nums text-sm shrink-0">
+                      <span className="font-bold text-text tabular-nums text-sm shrink-0">
                         ${d.amount}
                       </span>
                     </div>

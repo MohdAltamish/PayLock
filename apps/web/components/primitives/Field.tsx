@@ -38,7 +38,7 @@ export function Field({ id, label, hint, error, className, children }: FieldProp
   return (
     <FieldContext.Provider value={{ id, describedBy, hasError: Boolean(error) }}>
       <div className={cn("flex flex-col space-y-1.5", className)}>
-        <label htmlFor={id} className="text-sm font-medium text-text">
+        <label htmlFor={id} className="text-[15px] font-bold text-text">
           {label}
         </label>
         <div className="relative">{children}</div>
@@ -77,7 +77,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       aria-describedby={describedBy}
       aria-invalid={isError ? true : undefined}
       className={cn(
-        "w-full rounded-control border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted/60 transition-colors",
+        "w-full rounded-control border bg-surface px-3.5 py-2.5 text-[16px] text-text placeholder:text-muted/60 transition-colors",
         "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
         isError
           ? "border-danger focus-visible:outline-danger"
@@ -109,7 +109,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       aria-describedby={describedBy}
       aria-invalid={isError ? true : undefined}
       className={cn(
-        "w-full rounded-control border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted/60 transition-colors min-h-[100px]",
+        "w-full rounded-control border bg-surface px-3.5 py-2.5 text-[16px] text-text placeholder:text-muted/60 transition-colors min-h-[100px]",
         "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
         isError
           ? "border-danger focus-visible:outline-danger"
@@ -141,7 +141,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
       aria-describedby={describedBy}
       aria-invalid={isError ? true : undefined}
       className={cn(
-        "w-full rounded-control border bg-surface px-3 py-2 text-sm text-text transition-colors cursor-pointer",
+        "w-full rounded-control border bg-surface px-3.5 py-2.5 text-[16px] text-text transition-colors cursor-pointer",
         "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
         isError
           ? "border-danger focus-visible:outline-danger"
