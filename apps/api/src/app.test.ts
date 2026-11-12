@@ -46,14 +46,16 @@ describe("request ids", () => {
   });
 
   it("replaces an unsafe incoming id", async () => {
+    const unsafeId = "bad id\r\nx-evil: 1";
     const res = await (
       await app()
     ).inject({
       method: "GET",
       url: "/healthz",
-      headers: { "x-request-id": "bad id\r\nx-evil: 1" },
+      headers: { "x-request-id": unsafeId },
     });
-    expect(res.headers["x-request-id"]).not.toContain("bad");
+    expect(res.headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(res.headers["x-request-id"]).not.toBe(unsafeId);
   });
 });
 
